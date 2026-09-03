@@ -1,0 +1,23 @@
+{
+  "name": "lenios-rellenos-backend",
+  "version": "1.0.0",
+  "description": "API REST Backend para el sistema de pedidos y administración de Leños Rellenos",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "rest-api",
+    "express",
+    "food-ordering",
+    "lenios-rellenos"
+  ],
+  "author": "Leños Rellenos",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
