@@ -103,6 +103,9 @@
             <button class="btn-primary" onclick="switchView('menu')">
               Ver Menú y Ordenar 🚀
             </button>
+            <button class="btn-whatsapp-hero" onclick="sendQuickWhatsAppOrder()">
+              💬 Pedir Leños por WhatsApp
+            </button>
             <button class="btn-secondary" onclick="switchView('about')">
               Nuestra Historia 📖
             </button>
@@ -849,6 +852,12 @@
       <p>© 2026 Leños Rellenos — Todos los derechos reservados. Hecho con pasión artesanal.</p>
     </div>
   </footer>
+
+  <!-- Botón Flotante Permanente de WhatsApp para Pedir Leños Rellenos -->
+  <aside class="floating-whatsapp-btn" onclick="sendQuickWhatsAppOrder()" title="Pedir Leños por WhatsApp (+52 375 183 7635)" aria-label="Pedir Leños por WhatsApp">
+    <span class="floating-wa-icon">💬</span>
+    <span class="floating-wa-label">Pedir Leños por WhatsApp</span>
+  </aside>
 
   <!-- Scripts JavaScript (Arquitectura modular) -->
   <script src="js/products.js"></script>

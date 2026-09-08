@@ -366,7 +366,6 @@ function switchView(viewName) {
   } else if (viewName === 'menu') {
     if (window.mainApp) window.mainApp.renderProducts();
   }
-}
 
   // Cerrar menú móvil si estuviera abierto
   const navLinksList = document.querySelector('.nav-links');
@@ -412,6 +411,46 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 3200);
 }
+
+// Función global para mandar mensaje directo de Leños Rellenos por WhatsApp
+window.sendQuickWhatsAppOrder = async function() {
+  const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
+  const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
+  const items = window.cartManager ? window.cartManager.items : [];
+
+  let waMessage = '';
+  if (items && items.length > 0) {
+    const subtotal = window.cartManager.getSubtotal();
+    const itemsFormattedText = items.map(i => {
+      const customText = i.customization ? ` (${i.customization})` : '';
+      return `• *${i.quantity}x* ${i.name} - $${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)}${customText}`;
+    }).join('\n');
+
+    waMessage = 
+      `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
+      `_Quiero pedir los siguientes leños de mi carrito:_\n\n` +
+      `🛒 *PRODUCTOS:*\n` +
+      `${itemsFormattedText}\n\n` +
+      `💵 *Subtotal estimado:* $${subtotal.toFixed(2)}\n\n` +
+      `¿Me confirman disponibilidad y tiempo de entrega? ¡Gracias! 🪵🥖`;
+  } else {
+    waMessage = 
+      `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
+      `_Quiero hacer un pedido de sus deliciosos leños horneados a la leña._ 🪵🥖\n\n` +
+      `¿Me podrían compartir el menú del día y especialidades recomendadas? ¡Muchas gracias! ✨`;
+  }
+
+  // Copiar al portapapeles automáticamente
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(waMessage);
+      showToast('📋 ¡Mensaje copiado al portapapeles! Abriendo WhatsApp...');
+    }
+  } catch (e) {}
+
+  const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMessage)}`;
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+};
 
 // Inicialización al cargar la página
 window.addEventListener('DOMContentLoaded', () => {
