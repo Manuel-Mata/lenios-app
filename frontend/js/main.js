@@ -270,20 +270,52 @@ class MainApp {
       items: window.cartManager.items
     };
 
-    const result = await window.apiClient.createOrder(payload);
+    const submitBtn = document.getElementById('btnSendWhatsAppOrder') || document.querySelector('.btn-whatsapp-order');
+    const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳ Generando pedido...</span>';
+    }
 
-    if (result.success) {
-      window.cartManager.clearCart();
-      showToast('¡Pedido generado con éxito! Abriendo WhatsApp...');
-      
-      // Abrir WhatsApp en nueva pestaña
-      if (result.whatsappUrl) {
-        window.open(result.whatsappUrl, '_blank');
+    try {
+      const result = await window.apiClient.createOrder(payload);
+
+      if (result && result.success) {
+        window.cartManager.clearCart();
+        showToast('¡Pedido generado con éxito! Abriendo WhatsApp...');
+
+        const waUrl = result.whatsappUrl;
+
+        // Abrir WhatsApp de forma confiable evitando bloqueo de popups
+        if (waUrl) {
+          const newTab = window.open(waUrl, '_blank', 'noopener,noreferrer');
+          if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+            const link = document.createElement('a');
+            link.href = waUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
+        }
+
+        // Redirigir a vista de seguimiento
+        switchView('tracking');
+        if (result.order && result.order.id) {
+          window.trackerManager.loadOrder(result.order.id);
+        }
+      } else {
+        showToast(result?.message || 'Error al procesar el pedido', 'error');
       }
-
-      // Redirigir a vista de seguimiento
-      switchView('tracking');
-      window.trackerManager.loadOrder(result.order.id);
+    } catch (err) {
+      console.error('Error al enviar pedido:', err);
+      showToast('Ocurrió un error al generar el pedido', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+      }
     }
   }
 }

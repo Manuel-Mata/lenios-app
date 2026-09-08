@@ -89,11 +89,55 @@ class TrackerManager {
   }
 
   contactStore() {
+    if (!this.currentOrder) {
+      const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
+      const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent('Hola Leños Rellenos, tengo una consulta sobre sus servicios.')}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const order = this.currentOrder;
+    if (order.whatsappUrl) {
+      window.open(order.whatsappUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const isDelivery = order.deliveryType === 'delivery';
+    const deliveryCost = isDelivery ? (order.deliveryCost || 25.00) : 0;
+    const itemsFormattedText = (order.items || []).map(i => {
+      const customText = i.customization ? `\n   ✨ _${i.customization}_` : '';
+      return `🥖 *${i.quantity}x* ${i.name} ($${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)})${customText}`;
+    }).join('\n');
+
+    const paymentText = order.paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
+    const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Sucursal 🏪';
+
+    const waMessage = 
+      `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
+      `_Acabo de armar mi pedido desde la app web y se me hace agua la boca_ 🤤🪵\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📋 *DETALLES DEL PEDIDO*\n` +
+      `🆔 *Orden:* #${order.id}\n` +
+      `👤 *Cliente:* ${order.customerName}\n` +
+      `📱 *WhatsApp:* ${order.customerPhone}\n` +
+      `🛵 *Modalidad:* ${deliveryText}\n` +
+      `📍 *Dirección:* ${order.customerAddress || 'Recoger en sucursal'}\n` +
+      `💳 *Pago:* ${paymentText}\n` +
+      (order.notes ? `📝 *Notas:* ${order.notes}\n` : '') +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🛒 *PRODUCTOS SELECCIONADOS:*\n` +
+      `${itemsFormattedText}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `💵 *Subtotal:* $${(order.subtotal || 0).toFixed(2)}\n` +
+      (isDelivery ? `🛵 *Costo de Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+      `💰 *TOTAL A PAGAR: $${(order.total || 0).toFixed(2)}*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `✨ _¡Quedo a la espera de su confirmación para hornearlo al punto perfecto!_ 🔥🪵`;
+
     const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
     const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
-    const orderId = this.currentOrder ? this.currentOrder.id : '';
-    const text = encodeURIComponent(`Hola Leños Rellenos, tengo una duda sobre mi pedido #${orderId}`);
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank', 'noopener,noreferrer');
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
   }
 }
 
