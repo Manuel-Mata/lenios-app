@@ -360,39 +360,35 @@ const server = http.createServer(async (req, res) => {
         saveDb();
 
         const itemsFormattedText = items.map(i => {
-          const customText = i.customization ? `\n   ✨ _${i.customization}_` : '';
-          return `🥖 *${i.quantity}x* ${i.name} ($${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)})${customText}`;
+          const customText = i.customization ? ` (${i.customization})` : '';
+          return `• *${i.quantity}x* ${i.name} - $${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)}${customText}`;
         }).join('\n');
 
         const paymentText = paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
-        const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Sucursal 🏪';
+        const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪';
 
         const waMessage = 
           `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
-          `_Acabo de armar mi pedido desde la app web y se me hace agua la boca_ 🤤🪵\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━━\n` +
+          `_Acabo de armar mi pedido desde la app web:_\n\n` +
           `📋 *DETALLES DEL PEDIDO*\n` +
-          `🆔 *Orden:* #${orderId}\n` +
-          `👤 *Cliente:* ${customerName}\n` +
-          `📱 *WhatsApp:* ${customerPhone}\n` +
-          `🛵 *Modalidad:* ${deliveryText}\n` +
-          `📍 *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
-          `💳 *Pago:* ${paymentText}\n` +
-          (notes ? `📝 *Notas:* ${notes}\n` : '') +
-          `━━━━━━━━━━━━━━━━━━━━━\n` +
-          `🛒 *PRODUCTOS SELECCIONADOS:*\n` +
+          `• *Orden:* #${orderId}\n` +
+          `• *Cliente:* ${customerName}\n` +
+          `• *Teléfono:* ${customerPhone}\n` +
+          `• *Entrega:* ${deliveryText}\n` +
+          `• *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
+          `• *Pago:* ${paymentText}\n` +
+          (notes ? `• *Notas:* ${notes}\n` : '') +
+          `\n🛒 *PRODUCTOS:*\n` +
           `${itemsFormattedText}\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━━\n` +
           `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
-          (isDelivery ? `🛵 *Costo de Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
-          `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n` +
-          `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-          `✨ _¡Quedo a la espera de su confirmación para hornearlo al punto perfecto!_ 🔥🪵`;
+          (isDelivery ? `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+          `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
+          `_¡Muchas gracias por su preferencia!_ 🔥🪵`;
 
         // Número de WhatsApp configurado desde variable de entorno o base de datos
         const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635';
         const waNumber = rawWaNumber.replace(/\D/g, '');
-        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+        const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
 
         return sendJson(res, 201, { success: true, order: newOrder, whatsappUrl: waUrl, whatsappMessage: waMessage });
       }

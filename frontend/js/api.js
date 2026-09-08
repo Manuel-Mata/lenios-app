@@ -320,40 +320,36 @@ class ApiClient {
 
     this.saveOrderLocally(newOrder);
 
-    // Generar enlace de WhatsApp con formato https://wa.me/ y diseño estilizado
+    // Generar enlace de WhatsApp con formato optimizado
     const itemsFormattedText = orderPayload.items.map(i => {
-      const customText = i.customization ? `\n   ✨ _${i.customization}_` : '';
-      return `🥖 *${i.quantity}x* ${i.name} ($${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)})${customText}`;
+      const customText = i.customization ? ` (${i.customization})` : '';
+      return `• *${i.quantity}x* ${i.name} - $${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)}${customText}`;
     }).join('\n');
 
     const paymentText = orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
-    const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Sucursal 🏪';
+    const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪';
 
     const waMessage = 
       `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
-      `_Acabo de armar mi pedido desde la app web y se me hace agua la boca_ 🤤🪵\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `_Acabo de armar mi pedido desde la app web:_\n\n` +
       `📋 *DETALLES DEL PEDIDO*\n` +
-      `🆔 *Orden:* #${orderId}\n` +
-      `👤 *Cliente:* ${orderPayload.customerName}\n` +
-      `📱 *WhatsApp:* ${orderPayload.customerPhone}\n` +
-      `🛵 *Modalidad:* ${deliveryText}\n` +
-      `📍 *Dirección:* ${orderPayload.customerAddress || 'Recoger en sucursal'}\n` +
-      `💳 *Pago:* ${paymentText}\n` +
-      (orderPayload.notes ? `📝 *Notas:* ${orderPayload.notes}\n` : '') +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `🛒 *PRODUCTOS SELECCIONADOS:*\n` +
+      `• *Orden:* #${orderId}\n` +
+      `• *Cliente:* ${orderPayload.customerName}\n` +
+      `• *Teléfono:* ${orderPayload.customerPhone}\n` +
+      `• *Entrega:* ${deliveryText}\n` +
+      `• *Dirección:* ${orderPayload.customerAddress || 'Recoger en sucursal'}\n` +
+      `• *Pago:* ${paymentText}\n` +
+      (orderPayload.notes ? `• *Notas:* ${orderPayload.notes}\n` : '') +
+      `\n🛒 *PRODUCTOS:*\n` +
       `${itemsFormattedText}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
       `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
-      (isDelivery ? `🛵 *Costo de Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
-      `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `✨ _¡Quedo a la espera de su confirmación para hornearlo al punto perfecto!_ 🔥🪵`;
+      (isDelivery ? `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+      `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
+      `_¡Muchas gracias por su preferencia!_ 🔥🪵`;
 
     const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
     const waNumber = (business.whatsappFormatted || DEFAULT_BUSINESS.whatsappFormatted || '523751837635').replace(/\D/g, '');
-    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+    const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
 
     return {
       success: true,

@@ -285,6 +285,16 @@ class MainApp {
         showToast('¡Pedido generado con éxito! Abriendo WhatsApp...');
 
         const waUrl = result.whatsappUrl;
+        const waMessage = result.whatsappMessage;
+
+        // Copiar mensaje al portapapeles automáticamente
+        if (waMessage && navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(waMessage);
+          } catch (e) {
+            // Ignorar si hay restricciones de permisos
+          }
+        }
 
         // Abrir WhatsApp de forma confiable evitando bloqueo de popups
         if (waUrl) {
