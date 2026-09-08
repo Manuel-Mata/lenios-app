@@ -59,7 +59,7 @@
         <li><a href="javascript:void(0)" class="nav-link" data-view="tracking" onclick="switchView('tracking')">Rastrear Pedido</a></li>
       </ul>
 
-      <!-- Acciones: Carrito y Admin -->
+      <!-- Acciones: Carrito, Admin y Autenticación -->
       <div class="nav-actions">
         <button class="cart-btn" onclick="switchView('cart')">
           <span>🛒 Carrito</span>
@@ -69,6 +69,10 @@
         <button class="admin-nav-btn" onclick="switchView('admin')" title="Panel de Administración del Dueño">
           ⚙️ Panel Admin
         </button>
+
+        <div id="navAuthContainer" class="nav-auth-container">
+          <!-- Inyectado dinámicamente por auth.js -->
+        </div>
 
         <button class="mobile-menu-toggle" onclick="toggleMobileNav()">
           ☰
@@ -448,6 +452,103 @@
   </div>
 
   <!-- ==========================================
+       VISTA LOGIN: AUTENTICACIÓN Y GESTIÓN DE SESIÓN
+       ========================================== -->
+  <div id="view-login" class="view-section">
+    <main class="main-wrapper">
+      <div class="login-wrapper">
+        <div class="login-card">
+          <!-- Cabecera de Login -->
+          <div class="login-header">
+            <div class="login-icon-box">🔥</div>
+            <h2 class="login-title">Iniciar Sesión</h2>
+            <p class="login-subtitle">Ingresa tus credenciales para acceder al sistema de Leños Rellenos</p>
+          </div>
+
+          <!-- Mensaje de aviso de protección de ruta -->
+          <div id="loginNoticeBox" class="login-notice-box" style="display: none;"></div>
+
+          <!-- Alerta de error en formulario -->
+          <div id="loginFormAlert" class="login-alert-danger" style="display: none;"></div>
+
+          <!-- Formulario de Inicio de Sesión -->
+          <form id="loginForm" class="login-form" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="loginEmail">
+                <span>📧 Correo Electrónico</span>
+              </label>
+              <div class="input-with-icon">
+                <input 
+                  type="email" 
+                  id="loginEmail" 
+                  class="form-input" 
+                  placeholder="ejemplo@lenios.com" 
+                  autocomplete="username"
+                  required
+                >
+              </div>
+              <span id="loginEmailError" class="input-error-msg"></span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="loginPassword">
+                <span>🔒 Contraseña</span>
+              </label>
+              <div class="password-input-group">
+                <input 
+                  type="password" 
+                  id="loginPassword" 
+                  class="form-input" 
+                  placeholder="••••••••" 
+                  autocomplete="current-password"
+                  required
+                >
+                <button 
+                  type="button" 
+                  class="password-toggle-btn" 
+                  id="togglePwdIcon" 
+                  onclick="authManager.togglePasswordVisibility()" 
+                  title="Mostrar/Ocultar Contraseña"
+                  aria-label="Alternar visibilidad de contraseña"
+                >👁️</button>
+              </div>
+              <span id="loginPasswordError" class="input-error-msg"></span>
+            </div>
+
+            <button type="submit" id="loginSubmitBtn" class="btn-primary login-btn-full">
+              <span>🚀 Iniciar Sesión</span>
+            </button>
+          </form>
+
+          <!-- Acceso Rápido con Cuentas Demo -->
+          <div class="demo-accounts-card">
+            <div class="demo-accounts-title">
+              <span>⚡ Cuentas de Prueba Rápidas</span>
+            </div>
+            <div class="demo-accounts-buttons">
+              <button type="button" class="demo-chip-btn admin" onclick="authManager.fillDemoCredentials('admin')">
+                <span>🛡️ Administrador</span>
+                <small>admin@lenios.com</small>
+              </button>
+              <button type="button" class="demo-chip-btn client" onclick="authManager.fillDemoCredentials('customer')">
+                <span>👤 Cliente Regular</span>
+                <small>cliente@lenios.com</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Pie de Login con badge de seguridad -->
+          <div class="login-footer">
+            <span class="security-badge">
+              🛡️ Sesión Segura: JWT firmado en Cookie HttpOnly (Protección XSS y Minimización de Datos)
+            </span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
        VISTA 7: PANEL DE ADMINISTRACIÓN & DASHBOARD
        (Wireframe Pág. 6, 9 & 10)
        ========================================== -->
@@ -752,6 +853,7 @@
   <!-- Scripts JavaScript (Arquitectura modular) -->
   <script src="js/products.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/customizer.js"></script>
   <script src="js/tracker.js"></script>

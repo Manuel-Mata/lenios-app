@@ -262,5 +262,21 @@
       "status": "delivered",
       "createdAt": "2026-09-03T08:45:00.000Z"
     }
+  ],
+  "users": [
+    {
+      "id": "user-admin-01",
+      "name": "Administrador Leños",
+      "email": "admin@lenios.com",
+      "password": "admin123",
+      "role": "admin"
+    },
+    {
+      "id": "user-client-01",
+      "name": "Carlos Rodríguez",
+      "email": "cliente@lenios.com",
+      "password": "cliente123",
+      "role": "customer"
+    }
   ]
 }

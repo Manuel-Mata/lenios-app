@@ -1,10 +1,12 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { getDb, saveDb } = require('./config/db');
 
 const PORT = process.env.PORT || 5000;
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+const JWT_SECRET = process.env.JWT_SECRET || 'lenios_rellenos_super_secret_jwt_key_2026';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
@@ -20,6 +22,81 @@ const MIME_TYPES = {
   '.webp': 'image/webp'
 };
 
+function base64UrlEncode(str) {
+  return Buffer.from(str)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function base64UrlDecode(str) {
+  let output = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (output.length % 4) {
+    output += '=';
+  }
+  return Buffer.from(output, 'base64').toString();
+}
+
+function signJwt(payload, expiresInSeconds = 86400) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
+  const fullPayload = { ...payload, exp };
+
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
+  const signature = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+function verifyJwt(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  const [encodedHeader, encodedPayload, signature] = parts;
+  const expectedSig = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  if (signature !== expectedSig) return null;
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encodedPayload));
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseCookies(req) {
+  const list = {};
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return list;
+  cookieHeader.split(';').forEach(cookie => {
+    const parts = cookie.split('=');
+    const name = parts.shift()?.trim();
+    if (!name) return;
+    const val = parts.join('=').trim();
+    list[name] = decodeURIComponent(val);
+  });
+  return list;
+}
+
 function parseBody(req) {
   return new Promise((resolve) => {
     let body = '';
@@ -34,13 +111,16 @@ function parseBody(req) {
   });
 }
 
-function sendJson(res, statusCode, data) {
-  res.writeHead(statusCode, {
+function sendJson(res, statusCode, data, customHeaders = {}) {
+  const origin = res.req?.headers?.origin || '*';
+  const corsHeaders = {
     'Content-Type': 'application/json; charset=UTF-8',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': origin === '*' ? '*' : origin,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  });
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie'
+  };
+  res.writeHead(statusCode, { ...corsHeaders, ...customHeaders });
   res.end(JSON.stringify(data));
 }
 
@@ -65,16 +145,19 @@ function serveStatic(res, filePath) {
 }
 
 const server = http.createServer(async (req, res) => {
+  res.req = req;
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
   const method = req.method.toUpperCase();
 
   // CORS preflight
   if (method === 'OPTIONS') {
+    const origin = req.headers.origin || '*';
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin === '*' ? '*' : origin,
+      'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie'
     });
     return res.end();
   }
@@ -84,6 +167,71 @@ const server = http.createServer(async (req, res) => {
   // Rutas API
   if (pathname.startsWith('/api/')) {
     const db = getDb();
+    if (!db.users) {
+      db.users = [
+        { id: 'user-admin-01', name: 'Administrador Leños', email: 'admin@lenios.com', password: 'admin123', role: 'admin' },
+        { id: 'user-client-01', name: 'Carlos Rodríguez', email: 'cliente@lenios.com', password: 'cliente123', role: 'customer' }
+      ];
+    }
+
+    // 0. Autenticación (Auth)
+    if (pathname === '/api/auth/login' && method === 'POST') {
+      const body = await parseBody(req);
+      const email = (body.email || '').toLowerCase().trim();
+      const password = (body.password || '').trim();
+
+      if (!email || !password) {
+        return sendJson(res, 400, { success: false, message: 'Correo y contraseña requeridos' });
+      }
+
+      const user = db.users.find(u => u.email.toLowerCase() === email && u.password === password);
+      if (!user) {
+        return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' });
+      }
+
+      // Generar JWT
+      const userPayload = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      };
+      const token = signJwt(userPayload, 86400); // 24 horas
+
+      // Establecer Cookie HttpOnly
+      const cookieHeader = `token=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=86400`;
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Inicio de sesión exitoso',
+        user: userPayload
+      }, { 'Set-Cookie': cookieHeader });
+    }
+
+    if (pathname === '/api/auth/me' && method === 'GET') {
+      const cookies = parseCookies(req);
+      const token = cookies.token;
+      const decoded = verifyJwt(token);
+
+      if (!decoded) {
+        return sendJson(res, 401, { success: false, message: 'No hay sesión activa o el token ha expirado' });
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        user: {
+          id: decoded.id,
+          name: decoded.name,
+          email: decoded.email,
+          role: decoded.role
+        }
+      });
+    }
+
+    if (pathname === '/api/auth/logout' && method === 'POST') {
+      const cookieHeader = `token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+      return sendJson(res, 200, { success: true, message: 'Sesión cerrada correctamente' }, { 'Set-Cookie': cookieHeader });
+    }
 
     // 1. Health
     if (pathname === '/api/health') {

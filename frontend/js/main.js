@@ -12,6 +12,9 @@ class MainApp {
   }
 
   async init() {
+    if (window.authManager) {
+      await window.authManager.init();
+    }
     window.customizerManager.init();
     await this.loadBusinessHeader();
     await this.renderCarousel();
@@ -285,8 +288,13 @@ class MainApp {
   }
 }
 
-// Router sencillo de cambio de vistas
+// Router con verificación de autenticación y roles para rutas protegidas
 function switchView(viewName) {
+  // Verificar permisos de acceso a la vista
+  if (window.authManager && !window.authManager.canAccessView(viewName)) {
+    return;
+  }
+
   const sections = document.querySelectorAll('.view-section');
   const navLinks = document.querySelectorAll('.nav-link');
 
@@ -316,6 +324,7 @@ function switchView(viewName) {
   } else if (viewName === 'menu') {
     if (window.mainApp) window.mainApp.renderProducts();
   }
+}
 
   // Cerrar menú móvil si estuviera abierto
   const navLinksList = document.querySelector('.nav-links');

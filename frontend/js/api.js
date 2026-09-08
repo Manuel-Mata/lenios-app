@@ -40,13 +40,92 @@ class ApiClient {
     return this.isBackendAvailable;
   }
 
+  // Autenticación: Iniciar sesión (Minimización: solo envía email y password)
+  async login(credentials) {
+    const payload = {
+      email: (credentials.email || '').trim(),
+      password: (credentials.password || '').trim()
+    };
+
+    if (this.isBackendAvailable === null) await this.checkBackend();
+
+    if (this.isBackendAvailable) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        console.warn('Fallo backend en login:', err);
+      }
+    }
+
+    // Modo respaldo offline si backend no responde
+    const users = [
+      { id: 'user-admin-01', name: 'Administrador Leños', email: 'admin@lenios.com', password: 'admin123', role: 'admin' },
+      { id: 'user-client-01', name: 'Carlos Rodríguez', email: 'cliente@lenios.com', password: 'cliente123', role: 'customer' }
+    ];
+    const found = users.find(u => u.email.toLowerCase() === payload.email.toLowerCase() && u.password === payload.password);
+    if (found) {
+      return {
+        success: true,
+        message: 'Inicio de sesión exitoso (Modo local)',
+        user: { id: found.id, name: found.name, email: found.email, role: found.role }
+      };
+    }
+    return { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' };
+  }
+
+  // Autenticación: Obtener datos de la sesión actual mediante cookie HttpOnly
+  async getMe() {
+    if (this.isBackendAvailable === null) await this.checkBackend();
+
+    if (this.isBackendAvailable) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+        return { success: false, message: 'No hay sesión activa' };
+      } catch (err) {
+        console.warn('Fallo backend en getMe:', err);
+      }
+    }
+    return { success: false, message: 'No hay sesión activa' };
+  }
+
+  // Autenticación: Cerrar sesión e invalidar cookie HttpOnly
+  async logout() {
+    if (this.isBackendAvailable === null) await this.checkBackend();
+
+    if (this.isBackendAvailable) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        return await res.json();
+      } catch (err) {
+        console.warn('Fallo backend en logout:', err);
+      }
+    }
+    return { success: true, message: 'Sesión cerrada correctamente' };
+  }
+
   // Obtener productos
   async getProducts() {
     if (this.isBackendAvailable === null) await this.checkBackend();
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products`);
+        const res = await fetch(`${API_BASE_URL}/products`, { credentials: 'include' });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_products', JSON.stringify(data.products));
@@ -65,7 +144,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products`);
+        const res = await fetch(`${API_BASE_URL}/products`, { credentials: 'include' });
         const data = await res.json();
         if (data.customizerOptions) return data.customizerOptions;
       } catch (err) {
@@ -81,7 +160,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/business/info`);
+        const res = await fetch(`${API_BASE_URL}/business/info`, { credentials: 'include' });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_business', JSON.stringify(data.business));
@@ -100,7 +179,10 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/business/toggle`, { method: 'PATCH' });
+        const res = await fetch(`${API_BASE_URL}/business/toggle`, { 
+          method: 'PATCH',
+          credentials: 'include' 
+        });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_business', JSON.stringify(data.business));
@@ -123,7 +205,10 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products/${productId}/toggle`, { method: 'PATCH' });
+        const res = await fetch(`${API_BASE_URL}/products/${productId}/toggle`, { 
+          method: 'PATCH',
+          credentials: 'include' 
+        });
         const data = await res.json();
         if (data.success) return data.product;
       } catch (err) {
@@ -150,6 +235,7 @@ class ApiClient {
         const res = await fetch(`${API_BASE_URL}/products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(productData)
         });
         const data = await res.json();
@@ -176,7 +262,10 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products/${productId}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE_URL}/products/${productId}`, { 
+          method: 'DELETE',
+          credentials: 'include'
+        });
         const data = await res.json();
         if (data.success) return true;
       } catch (err) {
@@ -199,6 +288,7 @@ class ApiClient {
         const res = await fetch(`${API_BASE_URL}/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(orderPayload)
         });
         const data = await res.json();
@@ -246,7 +336,8 @@ class ApiClient {
       `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
       `_¡Muchas gracias por su preferencia!_`;
 
-    const waUrl = `https://api.whatsapp.com/send?phone=524731234567&text=${encodeURIComponent(waMessage)}`;
+    const waNumber = (DEFAULT_BUSINESS.whatsappFormatted || '524731234567').replace(/\D/g, '');
+    const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
 
     return {
       success: true,
@@ -269,7 +360,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders`);
+        const res = await fetch(`${API_BASE_URL}/orders`, { credentials: 'include' });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_orders', JSON.stringify(data.orders));
@@ -297,6 +388,7 @@ class ApiClient {
         const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ status })
         });
         const data = await res.json();
@@ -323,7 +415,10 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, { 
+          method: 'DELETE',
+          credentials: 'include'
+        });
         const data = await res.json();
         if (data.success) return true;
       } catch (err) {

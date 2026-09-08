@@ -8,6 +8,11 @@ class AdminManager {
   }
 
   async init() {
+    if (window.authManager && !window.authManager.isAdmin()) {
+      showToast('Acceso no autorizado al panel administrativo', 'error');
+      switchView('login');
+      return;
+    }
     await this.renderDashboard();
   }
 
