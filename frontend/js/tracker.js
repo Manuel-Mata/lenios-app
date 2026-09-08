@@ -126,18 +126,12 @@ class TrackerManager {
       `💰 *TOTAL A PAGAR: $${(order.total || 0).toFixed(2)}*\n\n` +
       `_¡Muchas gracias por su preferencia!_ 🔥🪵`;
 
-    // Copiar automáticamente al portapapeles por seguridad
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(waMessage);
-        showToast('📋 ¡Mensaje del pedido copiado al portapapeles! Si no aparece en WhatsApp, presiona Pegar (Ctrl+V)');
-      }
-    } catch (e) {
-      // Ignorar error de portapapeles si los permisos están restringidos
+    if (window.openWhatsAppWithMessage) {
+      window.openWhatsAppWithMessage(phone, waMessage);
+    } else {
+      const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMessage)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
     }
-
-    const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMessage)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
   }
 }
 

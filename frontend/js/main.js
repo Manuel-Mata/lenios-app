@@ -284,31 +284,12 @@ class MainApp {
         window.cartManager.clearCart();
         showToast('¡Pedido generado con éxito! Abriendo WhatsApp...');
 
-        const waUrl = result.whatsappUrl;
         const waMessage = result.whatsappMessage;
+        const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
+        const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
 
-        // Copiar mensaje al portapapeles automáticamente
-        if (waMessage && navigator.clipboard && navigator.clipboard.writeText) {
-          try {
-            await navigator.clipboard.writeText(waMessage);
-          } catch (e) {
-            // Ignorar si hay restricciones de permisos
-          }
-        }
-
-        // Abrir WhatsApp de forma confiable evitando bloqueo de popups
-        if (waUrl) {
-          const newTab = window.open(waUrl, '_blank', 'noopener,noreferrer');
-          if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-            const link = document.createElement('a');
-            link.href = waUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-          }
-        }
+        // Abrir WhatsApp y mostrar Modal con el mensaje estructurado
+        window.openWhatsAppWithMessage(phone, waMessage);
 
         // Redirigir a vista de seguimiento
         switchView('tracking');
@@ -412,8 +393,82 @@ function showToast(message, type = 'info') {
   }, 3200);
 }
 
+// Abre WhatsApp con el mensaje pre-cargado y abre modal con el texto completo
+window.openWhatsAppWithMessage = function(phone, message) {
+  const cleanPhone = (phone || '523751837635').replace(/\D/g, '');
+  const encodedText = encodeURIComponent(message);
+  const waWebUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+  const waAppUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+
+  // 1. Llenar el Modal de WhatsApp
+  const modalTextEl = document.getElementById('whatsappModalText');
+  if (modalTextEl) {
+    modalTextEl.value = message;
+  }
+  const btnWaWeb = document.getElementById('btnOpenWaWeb');
+  if (btnWaWeb) {
+    btnWaWeb.href = waWebUrl;
+  }
+  const btnWaApp = document.getElementById('btnOpenWaApp');
+  if (btnWaApp) {
+    btnWaApp.href = waAppUrl;
+  }
+  const modal = document.getElementById('whatsappModal');
+  if (modal) {
+    modal.classList.add('active');
+  }
+
+  // 2. Copiar automáticamente al portapapeles
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(message).then(() => {
+      showToast('📋 ¡Mensaje copiado al portapapeles! Listo para enviar.');
+    }).catch(() => {});
+  }
+
+  // 3. Abrir WhatsApp en nueva pestaña
+  try {
+    const newTab = window.open(waAppUrl, '_blank', 'noopener,noreferrer');
+    if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+      const link = document.createElement('a');
+      link.href = waAppUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  } catch (e) {
+    console.warn('Popup bloqueado:', e);
+  }
+};
+
+// Copiar texto desde el modal
+window.copyWhatsAppModalText = async function() {
+  const modalTextEl = document.getElementById('whatsappModalText');
+  const text = modalTextEl ? modalTextEl.value : '';
+  if (!text) return;
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else if (modalTextEl) {
+      modalTextEl.select();
+      document.execCommand('copy');
+    }
+    const btn = document.getElementById('btnCopyWaModal');
+    if (btn) {
+      const original = btn.innerHTML;
+      btn.innerHTML = '<span>✅ ¡Mensaje Copiado!</span>';
+      setTimeout(() => { btn.innerHTML = original; }, 2500);
+    }
+    showToast('📋 ¡Mensaje copiado! Puedes pegarlo con Ctrl + V en WhatsApp.');
+  } catch (e) {
+    showToast('Selecciona el texto y presiona Ctrl + C', 'error');
+  }
+};
+
 // Función global para mandar mensaje directo de Leños Rellenos por WhatsApp
-window.sendQuickWhatsAppOrder = async function() {
+window.sendQuickWhatsAppOrder = function() {
   const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
   const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
   const items = window.cartManager ? window.cartManager.items : [];
@@ -440,16 +495,7 @@ window.sendQuickWhatsAppOrder = async function() {
       `¿Me podrían compartir el menú del día y especialidades recomendadas? ¡Muchas gracias! ✨`;
   }
 
-  // Copiar al portapapeles automáticamente
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(waMessage);
-      showToast('📋 ¡Mensaje copiado al portapapeles! Abriendo WhatsApp...');
-    }
-  } catch (e) {}
-
-  const waUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waMessage)}`;
-  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  window.openWhatsAppWithMessage(phone, waMessage);
 };
 
 // Inicialización al cargar la página

@@ -418,7 +418,7 @@ const server = http.createServer(async (req, res) => {
 
     // 4. Business
     if (pathname === '/api/business/info') {
-      const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '524731234567').replace(/\D/g, '');
+      const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635').replace(/\D/g, '');
       const businessInfo = {
         ...db.business,
         whatsappFormatted: currentWa,
