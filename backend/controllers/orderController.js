@@ -94,23 +94,38 @@ exports.createOrder = (req, res) => {
   db.orders.unshift(newOrder);
   saveDb();
 
-  // Generar texto para WhatsApp
-  let waItemsText = items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? `\n  - Detalle: ${i.customization}` : ''}`).join('\n');
-  const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
-    `📋 *Orden:* #${orderId}\n` +
-    `👤 *Cliente:* ${customerName}\n` +
-    `📱 *Teléfono:* ${customerPhone}\n` +
-    `📍 *Entrega:* ${isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪'}\n` +
-    `🏠 *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
-    `💳 *Pago:* ${paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲'}\n` +
-    (notes ? `📝 *Notas:* ${notes}\n` : '') +
-    `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
-    `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
-    `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` +
-    `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
-    `_¡Muchas gracias por su preferencia!_`;
+  // Generar texto para WhatsApp con formato premium
+  const itemsFormattedText = items.map(i => {
+    const customText = i.customization ? `\n   ✨ _${i.customization}_` : '';
+    return `🥖 *${i.quantity}x* ${i.name} ($${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)})${customText}`;
+  }).join('\n');
 
-  const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '524731234567';
+  const paymentText = paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
+  const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Sucursal 🏪';
+
+  const waMessage = 
+    `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
+    `_Acabo de armar mi pedido desde la app web y se me hace agua la boca_ 🤤🪵\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `📋 *DETALLES DEL PEDIDO*\n` +
+    `🆔 *Orden:* #${orderId}\n` +
+    `👤 *Cliente:* ${customerName}\n` +
+    `📱 *WhatsApp:* ${customerPhone}\n` +
+    `🛵 *Modalidad:* ${deliveryText}\n` +
+    `📍 *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
+    `💳 *Pago:* ${paymentText}\n` +
+    (notes ? `📝 *Notas:* ${notes}\n` : '') +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `🛒 *PRODUCTOS SELECCIONADOS:*\n` +
+    `${itemsFormattedText}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
+    (isDelivery ? `🛵 *Costo de Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+    `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+    `✨ _¡Quedo a la espera de su confirmación para hornearlo al punto perfecto!_ 🔥🪵`;
+
+  const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635';
   const waNumber = rawWaNumber.replace(/\D/g, '');
   const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 

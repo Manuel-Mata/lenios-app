@@ -320,21 +320,36 @@ class ApiClient {
 
     this.saveOrderLocally(newOrder);
 
-    // Generar enlace de WhatsApp con formato https://wa.me/
-    let waItemsText = orderPayload.items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? `\n  - Detalle: ${i.customization}` : ''}`).join('\n');
-    const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
-      `📋 *Orden:* #${orderId}\n` +
+    // Generar enlace de WhatsApp con formato https://wa.me/ y diseño estilizado
+    const itemsFormattedText = orderPayload.items.map(i => {
+      const customText = i.customization ? `\n   ✨ _${i.customization}_` : '';
+      return `🥖 *${i.quantity}x* ${i.name} ($${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)})${customText}`;
+    }).join('\n');
+
+    const paymentText = orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
+    const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Sucursal 🏪';
+
+    const waMessage = 
+      `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
+      `_Acabo de armar mi pedido desde la app web y se me hace agua la boca_ 🤤🪵\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📋 *DETALLES DEL PEDIDO*\n` +
+      `🆔 *Orden:* #${orderId}\n` +
       `👤 *Cliente:* ${orderPayload.customerName}\n` +
-      `📱 *Teléfono:* ${orderPayload.customerPhone}\n` +
-      `📍 *Entrega:* ${isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪'}\n` +
-      `🏠 *Dirección:* ${orderPayload.customerAddress || 'Recoger en sucursal'}\n` +
-      `💳 *Pago:* ${orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲'}\n` +
+      `📱 *WhatsApp:* ${orderPayload.customerPhone}\n` +
+      `🛵 *Modalidad:* ${deliveryText}\n` +
+      `📍 *Dirección:* ${orderPayload.customerAddress || 'Recoger en sucursal'}\n` +
+      `💳 *Pago:* ${paymentText}\n` +
       (orderPayload.notes ? `📝 *Notas:* ${orderPayload.notes}\n` : '') +
-      `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🛒 *PRODUCTOS SELECCIONADOS:*\n` +
+      `${itemsFormattedText}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
       `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
-      `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` +
-      `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
-      `_¡Muchas gracias por su preferencia!_`;
+      (isDelivery ? `🛵 *Costo de Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+      `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `✨ _¡Quedo a la espera de su confirmación para hornearlo al punto perfecto!_ 🔥🪵`;
 
     const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
     const waNumber = (business.whatsappFormatted || DEFAULT_BUSINESS.whatsappFormatted || '523751837635').replace(/\D/g, '');
