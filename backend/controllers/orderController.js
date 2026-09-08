@@ -95,14 +95,14 @@ exports.createOrder = (req, res) => {
   saveDb();
 
   // Generar texto para WhatsApp
-  let waItemsText = items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
+  let waItemsText = items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? `\n  - Detalle: ${i.customization}` : ''}`).join('\n');
   const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
     `📋 *Orden:* #${orderId}\n` +
     `👤 *Cliente:* ${customerName}\n` +
     `📱 *Teléfono:* ${customerPhone}\n` +
-    `📍 *Entrega:* ${isDelivery ? 'A Domicilio' : 'Recoger en Local'}\n` +
-    `🏠 *Dirección:* ${customerAddress || 'En sucursal'}\n` +
-    `💳 *Pago:* ${paymentMethod === 'cash' ? 'Efectivo al recibir' : 'Transferencia / SPEI'}\n` +
+    `📍 *Entrega:* ${isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪'}\n` +
+    `🏠 *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
+    `💳 *Pago:* ${paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲'}\n` +
     (notes ? `📝 *Notas:* ${notes}\n` : '') +
     `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
     `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
@@ -110,8 +110,9 @@ exports.createOrder = (req, res) => {
     `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
     `_¡Muchas gracias por su preferencia!_`;
 
-  const waNumber = (db.business.whatsappFormatted || '524731234567').replace(/\D/g, '');
-  const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
+  const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '524731234567';
+  const waNumber = rawWaNumber.replace(/\D/g, '');
+  const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
   res.status(201).json({
     success: true,

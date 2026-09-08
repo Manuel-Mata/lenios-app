@@ -7,8 +7,8 @@ const DEFAULT_BUSINESS = {
   slogan: "Sabor a la Leña - Tradición en cada bocado",
   isOpen: true,
   schedule: "Lunes a Domingo de 1:00 PM a 10:30 PM",
-  whatsappNumber: "+52 473 123 4567",
-  whatsappFormatted: "524731234567",
+  whatsappNumber: "+52 375 183 7635",
+  whatsappFormatted: "523751837635",
   address: "Calle Tradición Artesanal #108, Dolores Hidalgo, Gto.",
   deliveryCost: 25.00,
   minOrder: 50.00

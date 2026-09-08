@@ -359,14 +359,14 @@ const server = http.createServer(async (req, res) => {
         db.orders.unshift(newOrder);
         saveDb();
 
-        let waItemsText = items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
+        let waItemsText = items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? `\n  - Detalle: ${i.customization}` : ''}`).join('\n');
         const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
           `📋 *Orden:* #${orderId}\n` +
           `👤 *Cliente:* ${customerName}\n` +
           `📱 *Teléfono:* ${customerPhone}\n` +
-          `📍 *Entrega:* ${isDelivery ? 'A Domicilio' : 'Recoger en Local'}\n` +
-          `🏠 *Dirección:* ${customerAddress || 'En sucursal'}\n` +
-          `💳 *Pago:* ${paymentMethod === 'cash' ? 'Efectivo al recibir' : 'Transferencia / SPEI'}\n` +
+          `📍 *Entrega:* ${isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪'}\n` +
+          `🏠 *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
+          `💳 *Pago:* ${paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲'}\n` +
           (notes ? `📝 *Notas:* ${notes}\n` : '') +
           `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
           `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
@@ -374,8 +374,10 @@ const server = http.createServer(async (req, res) => {
           `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
           `_¡Muchas gracias por su preferencia!_`;
 
-        const waNumber = (db.business.whatsappFormatted || '524731234567').replace(/\D/g, '');
-        const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
+        // Número de WhatsApp configurado desde variable de entorno o base de datos
+        const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '524731234567';
+        const waNumber = rawWaNumber.replace(/\D/g, '');
+        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
         return sendJson(res, 201, { success: true, order: newOrder, whatsappUrl: waUrl, whatsappMessage: waMessage });
       }
@@ -405,7 +407,13 @@ const server = http.createServer(async (req, res) => {
 
     // 4. Business
     if (pathname === '/api/business/info') {
-      return sendJson(res, 200, { success: true, business: db.business });
+      const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '524731234567').replace(/\D/g, '');
+      const businessInfo = {
+        ...db.business,
+        whatsappFormatted: currentWa,
+        whatsappNumber: process.env.WHATSAPP_NUMBER_DISPLAY || db.business?.whatsappNumber || `+${currentWa}`
+      };
+      return sendJson(res, 200, { success: true, business: businessInfo });
     }
     if (pathname === '/api/business/toggle' && method === 'PATCH') {
       db.business.isOpen = !db.business.isOpen;

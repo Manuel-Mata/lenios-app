@@ -176,7 +176,7 @@ class AdminManager {
     };
 
     const text = encodeURIComponent(msgs[order.status] || msgs['received']);
-    window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${text}`, '_blank');
+    window.open(`https://wa.me/${phone}?text=${text}`, '_blank', 'noopener,noreferrer');
   }
 
   async deleteOrder(orderId) {

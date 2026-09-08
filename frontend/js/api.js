@@ -320,15 +320,15 @@ class ApiClient {
 
     this.saveOrderLocally(newOrder);
 
-    // Generar enlace de WhatsApp
-    let waItemsText = orderPayload.items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
+    // Generar enlace de WhatsApp con formato https://wa.me/
+    let waItemsText = orderPayload.items.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? `\n  - Detalle: ${i.customization}` : ''}`).join('\n');
     const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
       `📋 *Orden:* #${orderId}\n` +
       `👤 *Cliente:* ${orderPayload.customerName}\n` +
       `📱 *Teléfono:* ${orderPayload.customerPhone}\n` +
-      `📍 *Entrega:* ${isDelivery ? 'A Domicilio' : 'Recoger en Local'}\n` +
-      `🏠 *Dirección:* ${orderPayload.customerAddress || 'En sucursal'}\n` +
-      `💳 *Pago:* ${orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir' : 'Transferencia / SPEI'}\n` +
+      `📍 *Entrega:* ${isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪'}\n` +
+      `🏠 *Dirección:* ${orderPayload.customerAddress || 'Recoger en sucursal'}\n` +
+      `💳 *Pago:* ${orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲'}\n` +
       (orderPayload.notes ? `📝 *Notas:* ${orderPayload.notes}\n` : '') +
       `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
       `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
@@ -336,8 +336,9 @@ class ApiClient {
       `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
       `_¡Muchas gracias por su preferencia!_`;
 
-    const waNumber = (DEFAULT_BUSINESS.whatsappFormatted || '524731234567').replace(/\D/g, '');
-    const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
+    const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
+    const waNumber = (business.whatsappFormatted || DEFAULT_BUSINESS.whatsappFormatted || '523751837635').replace(/\D/g, '');
+    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
     return {
       success: true,

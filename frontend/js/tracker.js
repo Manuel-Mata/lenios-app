@@ -90,10 +90,10 @@ class TrackerManager {
 
   contactStore() {
     const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
-    const phone = (business.whatsappFormatted || '524731234567').replace(/\D/g, '');
+    const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
     const orderId = this.currentOrder ? this.currentOrder.id : '';
     const text = encodeURIComponent(`Hola Leños Rellenos, tengo una duda sobre mi pedido #${orderId}`);
-    window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${text}`, '_blank');
+    window.open(`https://wa.me/${phone}?text=${text}`, '_blank', 'noopener,noreferrer');
   }
 }
 
