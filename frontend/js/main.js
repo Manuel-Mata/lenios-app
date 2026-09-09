@@ -498,6 +498,21 @@ window.sendQuickWhatsAppOrder = function() {
   window.openWhatsAppWithMessage(phone, waMessage);
 };
 
+// Funciones globales para control del Modal de Privacidad
+window.openPrivacyModal = function() {
+  const modal = document.getElementById('privacyModal');
+  if (modal) {
+    modal.classList.add('active');
+  }
+};
+
+window.closePrivacyModal = function() {
+  const modal = document.getElementById('privacyModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+};
+
 // Inicialización al cargar la página
 window.addEventListener('DOMContentLoaded', () => {
   window.mainApp = new MainApp();

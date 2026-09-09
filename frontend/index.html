@@ -254,16 +254,29 @@
         <div class="contact-card">
           <div class="icon-box">💬</div>
           <h4>Pedidos por WhatsApp</h4>
-          <p>Atención directa y rápida con el dueño para resolver cualquier detalle de tu orden.</p>
+          <p>Atención directa y rápida para resolver dudas o coordinar tu orden de forma personalizada.</p>
           <a href="https://wa.me/523751837635" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
-            Chatear por WhatsApp
+            +52 375 183 7635
           </a>
+        </div>
+
+        <div class="contact-card">
+          <div class="icon-box">✉️</div>
+          <h4>Correo y Privacidad</h4>
+          <p>Atención al cliente y solicitudes de Derechos ARCO / Datos Personales.</p>
+          <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
+            <a href="mailto:contacto@leniosrellenos.com" style="color: var(--color-primary); font-weight: 600; font-size: 0.88rem;">contacto@leniosrellenos.com</a>
+            <a href="mailto:privacidad@leniosrellenos.com" style="color: var(--color-text-muted); font-size: 0.82rem;">privacidad@leniosrellenos.com</a>
+          </div>
+          <button type="button" class="btn-secondary" onclick="switchView('privacy')" style="margin-top: 10px; padding: 6px 12px; font-size: 0.8rem;">
+            Ver Aviso de Privacidad 🛡️
+          </button>
         </div>
 
         <div class="contact-card">
           <div class="icon-box">📍</div>
           <h4>Nuestra Ubicación</h4>
-          <p>Calle Tradición Artesanal #108<br>Dolores Hidalgo, Guanajuato</p>
+          <p>Calle Tradición Artesanal #108, Col. Centro<br>Dolores Hidalgo C.I.N., Guanajuato, C.P. 37800</p>
           <span style="color: var(--color-primary); font-weight: 600; font-size: 0.85rem;">Servicio a domicilio y en local</span>
         </div>
 
@@ -362,6 +375,11 @@
                 <span>Total a Pagar:</span>
                 <span class="total-num" id="cartTotal">$0.00</span>
               </div>
+            </div>
+
+            <div class="privacy-badge-secure" style="margin-bottom: 14px;">
+              <span>🔒</span>
+              <span>Tus datos están protegidos conforme a la LFPDPPP. Consulta nuestro <a href="javascript:void(0)" onclick="openPrivacyModal()">Aviso de Privacidad</a>.</span>
             </div>
 
             <button type="submit" class="btn-whatsapp-order" id="btnSendWhatsAppOrder">
@@ -679,6 +697,231 @@
   </div>
 
   <!-- ==========================================
+       VISTA 8: AVISO DE PRIVACIDAD INTEGRAL
+       (Conforme a la LFPDPPP - México)
+       ========================================== -->
+  <div id="view-privacy" class="view-section">
+    <main class="main-wrapper">
+      <div class="privacy-wrapper">
+        <div class="privacy-card">
+          <div class="privacy-header-badge">
+            <span>🛡️</span> Documento Legal Oficial • LFPDPPP México
+          </div>
+
+          <h2 style="font-size: 2rem; margin-bottom: 8px;">Aviso de Privacidad Integral</h2>
+          <p style="color: var(--color-text-muted); font-size: 0.95rem;">
+            En <strong>Leños Rellenos</strong>, la privacidad, confidencialidad y correcto tratamiento de tus datos personales es nuestra máxima prioridad.
+          </p>
+
+          <!-- Ficha de Datos del Responsable -->
+          <div class="privacy-meta-info">
+            <div class="privacy-meta-item">
+              <span class="privacy-meta-label">Responsable del Tratamiento</span>
+              <span class="privacy-meta-val">Leños Rellenos (Emprendimiento Familiar)</span>
+            </div>
+            <div class="privacy-meta-item">
+              <span class="privacy-meta-label">Domicilio Operativo</span>
+              <span class="privacy-meta-val">Calle Tradición Artesanal #108, Col. Centro, C.P. 37800, Dolores Hidalgo C.I.N., Gto., México</span>
+            </div>
+            <div class="privacy-meta-item">
+              <span class="privacy-meta-label">Correo Oficial de Privacidad</span>
+              <span class="privacy-meta-val"><a href="mailto:privacidad@leniosrellenos.com" style="color: var(--color-primary); text-decoration: underline;">privacidad@leniosrellenos.com</a></span>
+            </div>
+            <div class="privacy-meta-item">
+              <span class="privacy-meta-label">Teléfono / WhatsApp de Atención</span>
+              <span class="privacy-meta-val"><a href="https://wa.me/523751837635" target="_blank" style="color: var(--color-primary);">+52 375 183 7635</a></span>
+            </div>
+            <div class="privacy-meta-item">
+              <span class="privacy-meta-label">Última Actualización</span>
+              <span class="privacy-meta-val">Septiembre de 2026</span>
+            </div>
+          </div>
+
+          <!-- Sección 1 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">1</span>
+              <span>Identidad y Compromiso del Responsable</span>
+            </h3>
+            <p class="privacy-paragraph">
+              <strong>Leños Rellenos</strong>, con domicilio en Calle Tradición Artesanal #108, Colonia Centro, Código Postal 37800 en la ciudad de Dolores Hidalgo Cuna de la Independencia Nacional, Guanajuato, México, es el responsable del uso, protección y tratamiento de sus datos personales conforme a los principios de licitud, consentimiento, información, calidad, finalidad, lealtad, proporcionalidad y responsabilidad establecidos en la <strong>Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong> y su Reglamento.
+            </p>
+          </div>
+
+          <!-- Sección 2 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">2</span>
+              <span>Datos Personales que Recabamos</span>
+            </h3>
+            <p class="privacy-paragraph">
+              Para llevar a cabo las finalidades descritas en este aviso, recabamos los siguientes datos personales de identificación y contacto proporcionados directamente por usted al registrarse, solicitar productos o realizar pedidos en nuestra plataforma web o vía WhatsApp:
+            </p>
+            <ul class="privacy-list">
+              <li><strong>Datos de Identificación:</strong> Nombre completo y firma electrónica (cuando aplique).</li>
+              <li><strong>Datos de Contacto:</strong> Número de teléfono celular / WhatsApp y dirección de correo electrónico (<em>contacto@leniosrellenos.com / cliente</em>).</li>
+              <li><strong>Datos de Entrega y Ubicación:</strong> Domicilio de entrega (calle, número exterior/interior, colonia, referencias de llegada y código postal) para pedidos con modalidad a domicilio.</li>
+              <li><strong>Datos de Transacción y Preferencias:</strong> Historial de compras, productos personalizados seleccionados (masas, extras, salsas), especificaciones especiales y método de pago elegido (efectivo o transferencia SPEI).</li>
+            </ul>
+            <p class="privacy-paragraph" style="font-size: 0.88rem; color: var(--color-text-muted); background: var(--color-bg-light); padding: 10px 14px; border-radius: var(--radius-sm); border-left: 3px solid var(--color-primary);">
+              ℹ️ <strong>Importante:</strong> Leños Rellenos <u>NO recaba ni almacena datos personales sensibles</u> ni números confidenciales de tarjetas de crédito/débito en nuestra plataforma.
+            </p>
+          </div>
+
+          <!-- Sección 3 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">3</span>
+              <span>Finalidades del Tratamiento de los Datos</span>
+            </h3>
+            <p class="privacy-paragraph">
+              Los datos personales que recabamos los utilizaremos para las siguientes finalidades:
+            </p>
+            <p class="privacy-paragraph" style="font-weight: 700; color: var(--color-primary-dark); margin-top: 10px;">
+              A) Finalidades Primarias (Necesarias para el servicio contratado):
+            </p>
+            <ul class="privacy-list">
+              <li>Procesar, preparar, hornear y empaquetar sus órdenes de leños rellenos solicitadas en la app web.</li>
+              <li>Generar la comanda y folio de orden (#LR-XXXXX) para seguimiento en cocina y mostrador.</li>
+              <li>Coordinar y realizar la entrega puntual en su domicilio o gestionar la recolección en sucursal.</li>
+              <li>Establecer comunicación directa vía WhatsApp o llamada telefónica para confirmar el pedido, aclarar dudas de personalización, informar estatus en tiempo real o eventualidades climáticas/de ruta.</li>
+              <li>Emisión de notas de consumo, recibos de pago y control de cobros.</li>
+            </ul>
+            <p class="privacy-paragraph" style="font-weight: 700; color: var(--color-primary-dark); margin-top: 14px;">
+              B) Finalidades Secundarias (Opcionales):
+            </p>
+            <ul class="privacy-list">
+              <li>Encuestas de satisfacción y evaluación de la calidad de nuestros productos y servicio de reparto.</li>
+              <li>Envío de promociones exclusivas, descuentos por fidelidad, cupones y lanzamientos de nuevos sabores de leños artesanales.</li>
+            </ul>
+            <p class="privacy-paragraph" style="font-size: 0.88rem; color: var(--color-text-muted);">
+              En caso de que no desee que sus datos personales sean tratados para estas finalidades secundarias, puede manifestarlo en cualquier momento enviando un correo a <a href="mailto:privacidad@leniosrellenos.com" style="color: var(--color-primary);">privacidad@leniosrellenos.com</a>.
+            </p>
+          </div>
+
+          <!-- Sección 4 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">4</span>
+              <span>Transferencia y Confidencialidad de los Datos</span>
+            </h3>
+            <p class="privacy-paragraph">
+              Leños Rellenos se compromete a <strong>no vender, alquilar, transferir ni compartir</strong> sus datos personales con terceros comerciales ajenos, agencias de publicidad o entidades externas sin su consentimiento previo y expreso, salvo las excepciones previstas en el artículo 37 de la LFPDPPP, las cuales incluyen:
+            </p>
+            <ul class="privacy-list">
+              <li>Transferencia estrictamente indispensable a nuestros repartidores internos para ubicar la dirección y entregar su comida.</li>
+              <li>Requerimientos oficiales emitidos por autoridades mexicanas competentes fundados y motivados por ley.</li>
+            </ul>
+          </div>
+
+          <!-- Sección 5 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">5</span>
+              <span>Derechos ARCO y Medios para Ejercerlos</span>
+            </h3>
+            <p class="privacy-paragraph">
+              Usted tiene derecho a conocer qué datos personales tenemos de usted, para qué los utilizamos y las condiciones del uso que les damos (<strong>Acceso</strong>). Asimismo, es su derecho solicitar la corrección de su información personal en caso de que esté desactualizada, sea inexacta o incompleta (<strong>Rectificación</strong>); que la eliminemos de nuestros registros o bases de datos cuando considere que la misma no está siendo utilizada adecuadamente (<strong>Cancelación</strong>); así como oponerse al uso de sus datos personales para fines específicos (<strong>Oposición</strong>). Estos se conocen como derechos <strong>ARCO</strong>.
+            </p>
+
+            <div class="arco-cards-grid">
+              <div class="arco-card">
+                <h5><span>👁️</span> Acceso</h5>
+                <p>Conocer los datos personales que conservamos y el uso que se les da.</p>
+              </div>
+              <div class="arco-card">
+                <h5><span>✏️</span> Rectificación</h5>
+                <p>Actualizar o corregir datos incompletos, inexactos o erróneos.</p>
+              </div>
+              <div class="arco-card">
+                <h5><span>🗑️</span> Cancelación</h5>
+                <p>Solicitar la eliminación total de sus datos de nuestros registros.</p>
+              </div>
+              <div class="arco-card">
+                <h5><span>⛔</span> Oposición</h5>
+                <p>Oponerse al tratamiento de datos para finalidades secundarias o publicidad.</p>
+              </div>
+            </div>
+
+            <!-- Caja de contacto ARCO -->
+            <div class="privacy-contact-box">
+              <div class="info">
+                <h5>📬 ¿Cómo ejercer tus Derechos ARCO?</h5>
+                <p>Envía tu solicitud indicando tu nombre, teléfono y el derecho que deseas ejercer a nuestro Oficial de Privacidad:</p>
+                <div style="margin-top: 6px; font-weight: 700; color: var(--color-primary-dark);">
+                  📧 <a href="mailto:privacidad@leniosrellenos.com" style="color: inherit;">privacidad@leniosrellenos.com</a> &nbsp;|&nbsp; 📱 WhatsApp: <a href="https://wa.me/523751837635" target="_blank" style="color: inherit;">+52 375 183 7635</a>
+                </div>
+              </div>
+              <div class="privacy-contact-actions">
+                <a href="mailto:privacidad@leniosrellenos.com?subject=Solicitud%20de%20Derechos%20ARCO%20-%20Le%C3%B1os%20Rellenos" class="btn-primary" style="padding: 8px 16px; font-size: 0.88rem;">
+                  Enviar Solicitud ARCO ✉️
+                </a>
+              </div>
+            </div>
+            <p class="privacy-paragraph" style="font-size: 0.82rem; color: var(--color-text-muted); margin-top: 8px;">
+              * Responderemos a su solicitud en un plazo no mayor a 15 días hábiles a través del mismo medio por el que fue recibida.
+            </p>
+          </div>
+
+          <!-- Sección 6 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">6</span>
+              <span>Uso de Cookies y Almacenamiento Local (LocalStorage)</span>
+            </h3>
+            <p class="privacy-paragraph">
+              Le informamos que en nuestra página web utilizamos tecnologías de almacenamiento local en su navegador (<em>LocalStorage</em>) con la única finalidad de:
+            </p>
+            <ul class="privacy-list">
+              <li>Recordar los productos que agregas a tu carrito de compras entre sesiones.</li>
+              <li>Guardar el folio de tu último pedido para permitirte el rastreo en tiempo real en la sección de seguimiento.</li>
+              <li>Mantener activa tu sesión segura de usuario si decides autenticarte.</li>
+            </ul>
+            <p class="privacy-paragraph" style="font-size: 0.88rem; color: var(--color-text-muted);">
+              Usted puede en cualquier momento borrar la memoria caché y datos de almacenamiento local desde la configuración de privacidad de su navegador web.
+            </p>
+          </div>
+
+          <!-- Sección 7 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">7</span>
+              <span>Medidas de Seguridad de la Información</span>
+            </h3>
+            <p class="privacy-paragraph">
+              <strong>Leños Rellenos</strong> cuenta con medidas de seguridad administrativas, técnicas y físicas implementadas (cifrado HTTPS/TLS, contraseñas robustas con hash seguro y control estricto de acceso de personal) para proteger sus datos personales contra daño, pérdida, alteración, destrucción o uso indebido.
+            </p>
+          </div>
+
+          <!-- Sección 8 -->
+          <div class="privacy-section-block">
+            <h3 class="privacy-section-title">
+              <span class="number">8</span>
+              <span>Modificaciones al Aviso de Privacidad</span>
+            </h3>
+            <p class="privacy-paragraph">
+              El presente aviso de privacidad puede sufrir modificaciones, cambios o actualizaciones derivadas de nuevos requerimientos legales, de nuestras propias necesidades operativas por los productos o servicios que ofrecemos, o de nuestras prácticas de privacidad.
+            </p>
+            <p class="privacy-paragraph">
+              Cualquier modificación será publicada inmediatamente en esta misma sección de nuestra plataforma web (<strong>https://lenios-app / Menú Privacidad</strong>) indicando la fecha de última actualización.
+            </p>
+          </div>
+
+          <!-- Botón de regreso -->
+          <div style="display: flex; gap: 14px; justify-content: center; margin-top: 30px; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" onclick="switchView('home')">
+              Volver al Inicio 🔥
+            </button>
+            <button type="button" class="btn-secondary" onclick="switchView('menu')">
+              Explorar Menú de Leños 🥖
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==========================================
        MODAL DE PERSONALIZACIÓN DE LEÑOS
        (Wireframe Pág. 13)
        ========================================== -->
@@ -852,6 +1095,55 @@
   </div>
 
   <!-- ==========================================
+       MODAL DE AVISO DE PRIVACIDAD RÁPIDO
+       ========================================== -->
+  <div class="modal-overlay" id="privacyModal">
+    <div class="customizer-modal" style="max-width: 680px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.5rem;">🛡️</span>
+          <h3 style="margin: 0; font-size: 1.2rem;">Aviso de Privacidad Simplificado</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closePrivacyModal()">✕</button>
+      </div>
+
+      <div class="privacy-modal-body">
+        <p style="margin-bottom: 12px;">
+          <strong>Leños Rellenos</strong>, con domicilio en Calle Tradición Artesanal #108, Col. Centro, C.P. 37800, Dolores Hidalgo C.I.N., Guanajuato, México, es responsable del tratamiento y resguardo de sus datos personales.
+        </p>
+
+        <h4 style="color: var(--color-primary-dark); font-size: 1rem; margin: 14px 0 6px 0;">🎯 ¿Para qué usamos tus datos?</h4>
+        <ul class="privacy-list" style="margin-bottom: 14px;">
+          <li>Procesamiento, preparación y entrega de sus pedidos de leños rellenos.</li>
+          <li>Comunicación y confirmación directa de órdenes vía WhatsApp y teléfono.</li>
+          <li>Emisión de notas de compra y seguimiento en tiempo real.</li>
+        </ul>
+
+        <h4 style="color: var(--color-primary-dark); font-size: 1rem; margin: 14px 0 6px 0;">🛡️ Tus Derechos ARCO</h4>
+        <p style="font-size: 0.9rem; color: var(--color-text-main); margin-bottom: 10px;">
+          Puedes acceder, rectificar, cancelar u oponerte al tratamiento de tus datos en cualquier momento enviando un correo a <a href="mailto:privacidad@leniosrellenos.com" style="color: var(--color-primary); font-weight: 700;">privacidad@leniosrellenos.com</a> o por WhatsApp al <a href="https://wa.me/523751837635" target="_blank" style="color: var(--color-primary); font-weight: 700;">+52 375 183 7635</a>.
+        </p>
+
+        <div style="background: var(--color-bg-light); border: 1px solid var(--color-border-light); border-radius: var(--radius-md); padding: 12px 16px; margin-top: 14px;">
+          <div style="font-size: 0.85rem; color: var(--color-text-muted);">
+            📧 <strong>Contacto General:</strong> <a href="mailto:contacto@leniosrellenos.com" style="color: inherit;">contacto@leniosrellenos.com</a><br>
+            📍 <strong>Ubicación:</strong> Dolores Hidalgo, Guanajuato, México
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-secondary" onclick="switchView('privacy'); closePrivacyModal();" style="font-size: 0.88rem;">
+          Ver Aviso Integral Completo 📄
+        </button>
+        <button type="button" class="btn-primary" onclick="closePrivacyModal()">
+          Entendido ✓
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
        FOOTER
        ========================================== -->
   <footer class="footer">
@@ -864,6 +1156,9 @@
         <p>
           Emprendimiento familiar dedicado a la preparación artesanal de leños rellenos horneados a la leña de mezquite con la más alta calidad y calidez en el trato.
         </p>
+        <div style="margin-top: 14px; font-size: 0.85rem; color: var(--color-primary-light);">
+          🛡️ Protección de datos garantizada conforme a la LFPDPPP.
+        </div>
       </div>
 
       <div class="footer-links">
@@ -874,25 +1169,36 @@
           <li><a href="javascript:void(0)" onclick="switchView('about')">Nuestra Historia</a></li>
           <li><a href="javascript:void(0)" onclick="switchView('tracking')">Rastreo de Pedidos</a></li>
           <li><a href="javascript:void(0)" onclick="switchView('admin')">Panel de Administración</a></li>
+          <li><a href="javascript:void(0)" onclick="switchView('privacy')" style="color: var(--color-primary-light); font-weight: 600;">Aviso de Privacidad 🛡️</a></li>
         </ul>
       </div>
 
       <div class="footer-contact">
         <h4>Contáctanos</h4>
-        <p style="color: var(--color-text-light-muted); font-size: 0.88rem; margin-bottom: 8px;">
-          📱 WhatsApp: +52 375 183 7635<br>
-          📍 Dolores Hidalgo, Guanajuato, México
+        <p style="color: var(--color-text-light-muted); font-size: 0.88rem; margin-bottom: 6px;">
+          📱 WhatsApp: <a href="https://wa.me/523751837635" target="_blank" style="color: #25D366; font-weight: 700;">+52 375 183 7635</a><br>
+          ✉️ Correo: <a href="mailto:contacto@leniosrellenos.com" style="color: #FFFFFF;">contacto@leniosrellenos.com</a><br>
+          🔒 Privacidad: <a href="mailto:privacidad@leniosrellenos.com" style="color: var(--color-primary-light);">privacidad@leniosrellenos.com</a><br>
+          📍 Calle Tradición Artesanal #108, Col. Centro, Dolores Hidalgo, Gto., C.P. 37800
         </p>
-        <div style="margin-top: 14px;">
-          <a href="https://wa.me/523751837635" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem; background: #25D366;">
+        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <a href="https://wa.me/523751837635" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 8px 14px; font-size: 0.85rem; background: #25D366;">
             Pedir por WhatsApp 💬
           </a>
+          <button type="button" class="btn-secondary" onclick="openPrivacyModal()" style="padding: 8px 12px; font-size: 0.82rem; background: rgba(255,255,255,0.1); color: #FFFFFF; border-color: rgba(255,255,255,0.2);">
+            Ver Privacidad 🔒
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="footer-bottom">
+    <div class="footer-bottom" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
       <p>© 2026 Leños Rellenos — Todos los derechos reservados. Hecho con pasión artesanal.</p>
+      <div style="display: flex; gap: 16px; font-size: 0.85rem;">
+        <a href="javascript:void(0)" onclick="switchView('privacy')" style="color: var(--color-text-light-muted); text-decoration: underline;">Aviso de Privacidad</a>
+        <span style="color: rgba(255,255,255,0.3);">|</span>
+        <a href="mailto:contacto@leniosrellenos.com" style="color: var(--color-text-light-muted);">contacto@leniosrellenos.com</a>
+      </div>
     </div>
   </footer>
 
