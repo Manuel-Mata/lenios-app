@@ -14,7 +14,7 @@ export const getCategorias = async (req: Request, res: Response, next: NextFunct
 
 export const getCategoriaById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const categoria = await categoriaService.getCategoriaById(Number(req.params.id));
+    const categoria = await categoriaService.getCategoriaById(req.params.id);
     res.status(200).json({ success: true, data: categoria });
   } catch (error) {
     next(error);

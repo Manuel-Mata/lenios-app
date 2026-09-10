@@ -5,7 +5,7 @@ export class CategoriaRepository {
     return prisma.categoria.findMany();
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     return prisma.categoria.findUnique({
       where: { id },
     });
@@ -17,14 +17,14 @@ export class CategoriaRepository {
     });
   }
 
-  async update(id: number, data: any) {
+  async update(id: string, data: any) {
     return prisma.categoria.update({
       where: { id },
       data,
     });
   }
 
-  async delete(id: number) {
+  async delete(id: string) {
     return prisma.categoria.delete({
       where: { id },
     });

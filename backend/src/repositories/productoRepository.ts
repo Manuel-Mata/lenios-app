@@ -1,44 +1,59 @@
 import prisma from '../config/prisma';
 
 export class ProductoRepository {
-  async findAll(filtros?: any) {
-    return prisma.producto.findMany({
-      where: filtros,
-      include: {
-        categoria: {
-          select: { nombre: true },
-        },
-      },
-    });
+  async findAll(page: number = 1, limit: number = 10, categoryId?: string) {
+    const skip = (page - 1) * limit;
+    
+    const whereClause = categoryId ? { categoriaId: categoryId } : {};
+
+    const [productos, total] = await Promise.all([
+      prisma.producto.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        include: {
+          categoria: true
+        }
+      }),
+      prisma.producto.count({ where: whereClause })
+    ]);
+
+    return {
+      data: productos,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     return prisma.producto.findUnique({
       where: { id },
       include: {
-        categoria: {
-          select: { nombre: true },
-        },
-      },
+        categoria: true
+      }
     });
   }
 
   async create(data: any) {
     return prisma.producto.create({
-      data,
+      data
     });
   }
 
-  async update(id: number, data: any) {
+  async update(id: string, data: any) {
     return prisma.producto.update({
       where: { id },
-      data,
+      data
     });
   }
 
-  async delete(id: number) {
+  async delete(id: string) {
     return prisma.producto.delete({
-      where: { id },
+      where: { id }
     });
   }
 }
