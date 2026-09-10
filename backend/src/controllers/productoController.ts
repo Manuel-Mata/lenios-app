@@ -8,8 +8,9 @@ export const getProductos = async (req: Request, res: Response, next: NextFuncti
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const category = req.query.category ? String(req.query.category) : undefined;
+    const search = req.query.search ? String(req.query.search) : undefined;
 
-    const result = await productoService.getAllProductos(page, limit, category);
+    const result = await productoService.getAllProductos(page, limit, category, search);
     res.status(200).json({
       success: true,
       message: 'Lista de productos obtenida exitosamente',

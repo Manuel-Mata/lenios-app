@@ -4,8 +4,8 @@ import cloudinary from '../config/cloudinary';
 const productoRepository = new ProductoRepository();
 
 export class ProductoService {
-  async getAllProductos(page: number, limit: number, categoryId?: string) {
-    return productoRepository.findAll(page, limit, categoryId);
+  async getAllProductos(page: number, limit: number, categoryId?: string, search?: string) {
+    return productoRepository.findAll({ page, limit, categoryId, search });
   }
 
   async getProductoById(id: string) {
