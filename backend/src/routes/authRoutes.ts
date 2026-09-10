@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { register, login, refresh } from '../controllers/authController';
+import { authLimiter } from '../middlewares/rateLimitMiddleware';
 
 const router = Router();
 
@@ -7,7 +8,7 @@ const router = Router();
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Registra un nuevo usuario
+ *     summary: Registra un nuevo usuario (Protegido por Rate Limiting)
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -29,14 +30,16 @@ const router = Router();
  *     responses:
  *       201:
  *         description: Usuario registrado exitosamente
+ *       429:
+ *         description: Demasiados intentos de registro desde esta IP
  */
-router.post('/register', register);
+router.post('/register', authLimiter, register);
 
 /**
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Inicia sesión de usuario
+ *     summary: Inicia sesión de usuario (Protegido por Rate Limiting contra Fuerza Bruta)
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -52,8 +55,10 @@ router.post('/register', register);
  *     responses:
  *       200:
  *         description: Inicio de sesión exitoso, devuelve tokens
+ *       429:
+ *         description: Demasiados intentos de login (Rate limit excedido)
  */
-router.post('/login', login);
+router.post('/login', authLimiter, login);
 
 /**
  * @swagger

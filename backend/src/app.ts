@@ -1,9 +1,9 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import logger from './config/logger';
+import { apiLimiter } from './middlewares/rateLimitMiddleware';
 
 // import clienteRoutes from './routes/clienteRoutes';
 import categoriaRoutes from './routes/categoriaRoutes';
@@ -37,14 +37,7 @@ app.use(
   }),
 );
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Límite de 100 peticiones por IP por ventana
-  message: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo más tarde.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api', limiter);
+app.use('/api', apiLimiter);
 
 // --- RUTAS DE LA API --- //
 app.get('/api/health', (req: Request, res: Response) => {
