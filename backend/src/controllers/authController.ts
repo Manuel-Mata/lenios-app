@@ -17,7 +17,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       message: error.message || 'Error al registrar el usuario',
     });
   }
-};
+}; 
+
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
