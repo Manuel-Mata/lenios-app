@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { deleteUsuarioArco, getUsuarioProfile } from '../controllers/usuarioController';
 import { verifyToken } from '../middlewares/authMiddleware';
 import { auditLogger } from '../middlewares/auditMiddleware';
+import { validateUserOwnership } from '../middlewares/bolaMiddleware';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ router.use(auditLogger);
  * @swagger
  * /api/users/{id}:
  *   get:
- *     summary: Obtiene el perfil de un usuario (Solo el dueño o Admin)
+ *     summary: Obtiene el perfil de un usuario (Protegido BOLA: Solo el dueño o Admin)
  *     tags: [Users / ARCO]
  *     security:
  *       - bearerAuth: []
@@ -29,13 +30,13 @@ router.use(auditLogger);
  *       403:
  *         description: Acceso denegado
  */
-router.get('/:id', getUsuarioProfile);
+router.get('/:id', validateUserOwnership, getUsuarioProfile);
 
 /**
  * @swagger
  * /api/users/{id}:
  *   delete:
- *     summary: Baja de usuario y anonimización de datos personales (Cumplimiento Derecho ARCO de Cancelación / LGPDPPSO)
+ *     summary: Baja de usuario y anonimización de datos personales (Protegido BOLA: Solo el dueño o Admin)
  *     tags: [Users / ARCO]
  *     security:
  *       - bearerAuth: []
@@ -52,6 +53,6 @@ router.get('/:id', getUsuarioProfile);
  *       403:
  *         description: Acceso denegado
  */
-router.delete('/:id', deleteUsuarioArco);
+router.delete('/:id', validateUserOwnership, deleteUsuarioArco);
 
 export default router;
