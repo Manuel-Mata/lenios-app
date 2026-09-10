@@ -8,7 +8,9 @@ import logger from './config/logger';
 // import clienteRoutes from './routes/clienteRoutes';
 import categoriaRoutes from './routes/categoriaRoutes';
 import productoRoutes from './routes/productoRoutes';
-// import pedidoRoutes from './routes/pedidoRoutes';
+import pedidoRoutes from './routes/pedidoRoutes';
+import adminOrderRoutes from './routes/adminOrderRoutes';
+import usuarioRoutes from './routes/usuarioRoutes';
 import authRoutes from './routes/authRoutes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
@@ -54,10 +56,11 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// app.use('/api/clientes', clienteRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/productos', productoRoutes);
-// app.use('/api/pedidos', pedidoRoutes);
+app.use('/api/orders', pedidoRoutes);
+app.use('/api/admin', adminOrderRoutes);
+app.use('/api/users', usuarioRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
