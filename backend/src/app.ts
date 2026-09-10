@@ -5,10 +5,13 @@ import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import logger from './config/logger';
 
-import clienteRoutes from './routes/clienteRoutes';
+// import clienteRoutes from './routes/clienteRoutes';
 import categoriaRoutes from './routes/categoriaRoutes';
 import productoRoutes from './routes/productoRoutes';
-import pedidoRoutes from './routes/pedidoRoutes';
+// import pedidoRoutes from './routes/pedidoRoutes';
+import authRoutes from './routes/authRoutes';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 
 const app: Application = express();
 
@@ -51,10 +54,12 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-app.use('/api/clientes', clienteRoutes);
+// app.use('/api/clientes', clienteRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/productos', productoRoutes);
-app.use('/api/pedidos', pedidoRoutes);
+// app.use('/api/pedidos', pedidoRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- MANEJO DE ERRORES GLOBALES --- //
 app.use((req: Request, res: Response) => {
