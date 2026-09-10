@@ -7,57 +7,83 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Cliente {
-  id             Int      @id @default(autoincrement())
-  nombre         String
-  telefono       String?
-  ubicacion      String?
-  email          String   @unique
-  password       String
-  rol            String   @default("cliente")
-  fecha_registro DateTime @default(now())
-  pedidos        Pedido[]
+enum Rol {
+  admin
+  cliente
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+  CANCELADO
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       Rol      @default(cliente)
+  pedidos   Pedido[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("usuarios")
 }
 
 model Categoria {
-  id          Int        @id @default(autoincrement())
+  id          String     @id @default(uuid())
   nombre      String     @unique
   descripcion String?
   productos   Producto[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("categorias")
 }
 
 model Producto {
-  id           Int             @id @default(autoincrement())
-  nombre       String
-  descripcion  String?
-  precio       Float
-  imagen       String?
-  id_categoria Int
-  categoria    Categoria       @relation(fields: [id_categoria], references: [id])
-  disponible   Boolean         @default(true)
-  stock        Int             @default(0)
-  detalles     DetallePedido[]
+  id             String          @id @default(uuid())
+  nombre         String
+  descripcion    String?
+  precio         Float
+  stock          Int             @default(0)
+  imagenUrl      String?
+  categoriaId    String
+  categoria      Categoria       @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  detallesPedido DetallePedido[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("productos")
 }
 
 model Pedido {
-  id            Int             @id @default(autoincrement())
-  id_cliente    Int
-  cliente       Cliente         @relation(fields: [id_cliente], references: [id])
-  fecha_pedido  DateTime        @default(now())
+  id            String          @id @default(uuid())
+  usuarioId     String
+  usuario       Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
   total         Float
-  estado        String          @default("pendiente")
-  metodo_envio  String          @default("delivery")
+  estado        EstadoPedido    @default(PENDIENTE)
+  metodoEnvio   String?
   observaciones String?
   detalles      DetallePedido[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("pedidos")
 }
 
 model DetallePedido {
-  id               Int      @id @default(autoincrement())
-  id_pedido        Int
-  pedido           Pedido   @relation(fields: [id_pedido], references: [id])
-  id_producto      Int
-  producto         Producto @relation(fields: [id_producto], references: [id])
-  cantidad         Int
-  precio_unitario  Float
-  fecha            DateTime @default(now())
+  id             String   @id @default(uuid())
+  pedidoId       String
+  pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productoId     String
+  producto       Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  cantidad       Int
+  precioUnitario Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("detalles_pedido")
 }
