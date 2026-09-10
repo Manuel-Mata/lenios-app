@@ -8,6 +8,7 @@ import {
 } from '../controllers/pedidoController';
 import { verifyToken, requireAdmin } from '../middlewares/authMiddleware';
 import { auditLogger } from '../middlewares/auditMiddleware';
+import { validateOrderOwnership } from '../middlewares/bolaMiddleware';
 
 const router = Router();
 
@@ -99,7 +100,7 @@ router.get('/mis-pedidos', getMisPedidos);
  *       404:
  *         description: Pedido no encontrado
  */
-router.get('/:id', getPedidoById);
+router.get('/:id', validateOrderOwnership, getPedidoById);
 
 /**
  * @swagger
