@@ -13,12 +13,20 @@ export interface AuthRequest extends Request {
 
 export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
+  let token: string | undefined;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Acceso denegado. Token no proporcionado o inválido.' });
+  // 1. Intentar leer el token del header Authorization (Bearer <token>)
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  }
+  // 2. Si no hay header, intentar leer la cookie HttpOnly "accessToken"
+  else if (req.cookies?.accessToken) {
+    token = req.cookies.accessToken;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Acceso denegado. Token no proporcionado o inválido.' });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
@@ -29,7 +37,6 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     };
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: 'Acceso denegado. Token no proporcionado o inválido.' });
     return res.status(401).json({ success: false, message: 'Token inválido o expirado.' });
   }
 };

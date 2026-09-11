@@ -43,9 +43,18 @@ export class AuthService {
    * envíe la cookie al backend.
    */
   getProfile(): Observable<{ success: boolean; data: Usuario }> {
+    console.log('[AuthService] 🔍 Llamando GET /auth/me con withCredentials:true...');
     return this.http.get<{ success: boolean; data: Usuario }>(`${this.apiUrl}/me`, {
       withCredentials: true,
-    });
+    }).pipe(
+      tap((res) => {
+        console.log('[AuthService] 📦 Respuesta de /auth/me:', JSON.stringify(res));
+      }),
+      catchError((err) => {
+        console.error('[AuthService] ❌ Error en /auth/me:', err.status, err.message, err);
+        return throwError(() => err);
+      })
+    );
   }
   /**
    * POST /auth/login – inicia sesión.
@@ -55,29 +64,41 @@ export class AuthService {
    * del login al suscriptor.
    */
   login(credentials: LoginDto): Observable<RespuestaAuth> {
+    console.log('[AuthService] 🚀 Iniciando login con email:', credentials.email);
     return this.http
       .post<RespuestaAuth>(`${this.apiUrl}/login`, credentials, {
         withCredentials: true, // permite recibir la cookie HttpOnly
       })
       .pipe(
+        tap((res) => {
+          console.log('[AuthService] 📩 Respuesta del POST /login:', JSON.stringify(res));
+        }),
         switchMap((res) => {
           if (res && res.success) {
+            console.log('[AuthService] ✅ Login exitoso, encadenando getProfile()...');
             // Login exitoso → obtener perfil del usuario
             return this.getProfile().pipe(
               tap((profileRes) => {
+                console.log('[AuthService] 👤 Perfil recibido:', JSON.stringify(profileRes));
                 if (profileRes.success && profileRes.data) {
                   this.guardarSesion(profileRes.data);
+                  console.log('[AuthService] 💾 Sesión guardada. currentUser:', JSON.stringify(this.currentUser()));
+                  console.log('[AuthService] 🔑 isAuthenticated:', this.isAuthenticated());
+                  console.log('[AuthService] 👑 isAdmin:', this.isAdmin());
+                } else {
+                  console.warn('[AuthService] ⚠️ Perfil no tiene datos válidos:', profileRes);
                 }
               }),
               // Devolver la respuesta original del endpoint /login
               map(() => res)
             );
           }
+          console.warn('[AuthService] ⚠️ Login NO exitoso, res.success es false:', res);
           // Si login falló, propagar el error tal cual
           return throwError(() => res);
         }),
         catchError((error) => {
-          console.error('[AuthService] Error al iniciar sesión:', error);
+          console.error('[AuthService] ❌ Error al iniciar sesión:', error);
           return throwError(() => error);
         })
       );

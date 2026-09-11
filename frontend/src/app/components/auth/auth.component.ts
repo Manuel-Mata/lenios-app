@@ -242,28 +242,44 @@ export class AuthComponent {
   ) {}
 
   handleLogin() {
+    console.log('[AuthComponent] 🖱️ Botón de login presionado');
+    console.log('[AuthComponent] 📝 Formulario:', this.loginForm.email, '/ password:', this.loginForm.password ? '***' : '(vacío)');
+
     if (!this.loginForm.email || !this.loginForm.password) {
       this.errorMessage.set('Por favor completa todos los campos requeridos.');
+      console.warn('[AuthComponent] ⚠️ Campos vacíos, abortando login.');
       return;
     }
 
     // OWASP XSS Sanitización masiva de formulario
     this.loginForm = this.sanitizerService.sanitizarFormulario(this.loginForm);
+    console.log('[AuthComponent] 🧹 Formulario sanitizado:', this.loginForm.email);
 
     this.cargando.set(true);
     this.errorMessage.set('');
 
+    console.log('[AuthComponent] 📡 Llamando authService.login()...');
     this.authService.login(this.loginForm).subscribe({
       next: (res: any) => {
         this.cargando.set(false);
+        console.log('[AuthComponent] ✅ Login completado. Respuesta:', JSON.stringify(res));
+        console.log('[AuthComponent] 👤 currentUser:', JSON.stringify(this.authService.currentUser()));
+        console.log('[AuthComponent] 🔑 isAuthenticated:', this.authService.isAuthenticated());
+        console.log('[AuthComponent] 👑 isAdmin:', this.authService.isAdmin());
+
         if (this.authService.isAdmin()) {
+          console.log('[AuthComponent] 🚀 Navegando a /admin');
           this.router.navigate(['/admin']);
         } else {
+          console.log('[AuthComponent] 🚀 Navegando a /catalogo');
           this.router.navigate(['/catalogo']);
         }
       },
       error: (err: any) => {
         this.cargando.set(false);
+        console.error('[AuthComponent] ❌ Error en login:', err);
+        console.error('[AuthComponent] ❌ err.error:', err.error);
+        console.error('[AuthComponent] ❌ err.status:', err.status);
         this.errorMessage.set(err.error?.message || 'Error de autenticación. Verifica tus credenciales.');
       },
     });

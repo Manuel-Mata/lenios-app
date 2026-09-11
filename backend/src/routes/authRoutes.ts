@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { register, login, refresh } from '../controllers/authController';
+import { register, login, refresh, logout, getProfileMe } from '../controllers/authController';
 import { authLimiter } from '../middlewares/rateLimitMiddleware';
+import { verifyToken } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -54,11 +55,39 @@ router.post('/register', authLimiter, register);
  *                 type: string
  *     responses:
  *       200:
- *         description: Inicio de sesión exitoso, devuelve tokens
+ *         description: Inicio de sesión exitoso, cookie HttpOnly establecida
  *       429:
  *         description: Demasiados intentos de login (Rate limit excedido)
  */
 router.post('/login', authLimiter, login);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Obtiene el perfil del usuario autenticado (requiere cookie HttpOnly)
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Datos del usuario autenticado (id, nombre, email, rol)
+ *       401:
+ *         description: No autenticado o token inválido
+ */
+router.get('/me', verifyToken, getProfileMe);
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Cierra la sesión del usuario eliminando la cookie HttpOnly
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logout exitoso
+ */
+router.post('/logout', logout);
 
 /**
  * @swagger
