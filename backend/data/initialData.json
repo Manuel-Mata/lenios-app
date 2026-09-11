@@ -48,7 +48,7 @@
       "name": "Leño de Arrachera Ahumada",
       "category": "gourmet",
       "price": 89,
-      "stock": 16,
+      "stock": 14,
       "available": true,
       "isFeatured": true,
       "badge": "⭐ Más Vendido",
@@ -289,6 +289,35 @@
   },
   "orders": [
     {
+      "id": "LR-69261",
+      "userId": "user-client-01",
+      "sessionId": "a137b6d3-3f8d-4ac1-b29f-2065771ce771",
+      "customerName": "[DATO ANONIMIZADO POR DERECHO ARCO]",
+      "customerPhone": "0000000000",
+      "customerAddress": "[DIRECCIÓN SUPRIMIDA CONFORME A LGPDPPSO]",
+      "deliveryType": "delivery",
+      "paymentMethod": "cash",
+      "notes": "[NOTAS ELIMINADAS]",
+      "items": [
+        {
+          "id": "leno-arrachera",
+          "name": "Leño de Arrachera Ahumada",
+          "price": 97,
+          "basePrice": 89,
+          "extraPrice": 8,
+          "quantity": 2,
+          "customization": "Base Rústica",
+          "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"
+        }
+      ],
+      "subtotal": 194,
+      "deliveryCost": 25,
+      "total": 219,
+      "status": "in_oven",
+      "createdAt": "2026-09-11T04:50:16.911Z",
+      "updatedAt": "2026-09-11T04:50:16.915Z"
+    },
+    {
       "id": "LR-67329",
       "sessionId": "1230803e-1132-4dde-b1d8-95d2a3510ffb",
       "customerName": "Prueba Cliente",
@@ -397,6 +426,129 @@
       "total": 202,
       "status": "delivered",
       "createdAt": "2026-09-03T08:45:00.000Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-admin-01",
+      "name": "Administrador Leños",
+      "email": "admin@lenios.com",
+      "password": "admin123",
+      "role": "admin"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "audit-1789102216922-700",
+      "timestamp": "2026-09-11T04:50:16.922Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.922Z",
+      "action": "READ_AUDIT_LOGS",
+      "purpose": "Revisión de bitácora de trazabilidad y accesos LGPDPPSO",
+      "resource": ""
+    },
+    {
+      "id": "audit-1789102216920-135",
+      "timestamp": "2026-09-11T04:50:16.920Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.920Z",
+      "action": "ARCO_DATA_ERASURE",
+      "purpose": "Ejercicio de Derecho ARCO: Cancelación y Supresión de Datos Personales conforme a LGPDPPSO",
+      "resource": "User user-client-01, Anonymized Orders: 1"
+    },
+    {
+      "id": "audit-1789102216917-225",
+      "timestamp": "2026-09-11T04:50:16.917Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.917Z",
+      "action": "LIST_ADMIN_ORDERS",
+      "purpose": "Gestión y control operativo de pedidos (Admin)",
+      "resource": "All Orders"
+    },
+    {
+      "id": "audit-1789102216916-366",
+      "timestamp": "2026-09-11T04:50:16.916Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.916Z",
+      "action": "UPDATE_ORDER_STATUS",
+      "purpose": "Actualización de estado de pedido de received a in_oven",
+      "resource": "Order #LR-69261"
+    },
+    {
+      "id": "audit-1789102216914-209",
+      "timestamp": "2026-09-11T04:50:16.914Z",
+      "who": {
+        "userId": "user-client-01",
+        "userName": "Carlos Rodríguez",
+        "role": "customer",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.914Z",
+      "action": "READ_ORDER_DETAIL",
+      "purpose": "Consulta de detalle de pedido",
+      "resource": "Order #LR-69261"
+    },
+    {
+      "id": "audit-1789102216912-920",
+      "timestamp": "2026-09-11T04:50:16.912Z",
+      "who": {
+        "userId": "user-client-01",
+        "userName": "Carlos Rodríguez",
+        "role": "customer",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.912Z",
+      "action": "CREATE_ORDER",
+      "purpose": "Registro de nuevo pedido de cliente",
+      "resource": "Order #LR-69261"
+    },
+    {
+      "id": "audit-1789102216909-124",
+      "timestamp": "2026-09-11T04:50:16.909Z",
+      "who": {
+        "userId": "user-client-01",
+        "userName": "Carlos Rodríguez",
+        "role": "customer",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.909Z",
+      "action": "LOGIN_SUCCESS",
+      "purpose": "Inicio de sesión de usuario",
+      "resource": "User: user-client-01"
+    },
+    {
+      "id": "audit-1789102216903-52",
+      "timestamp": "2026-09-11T04:50:16.903Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T04:50:16.903Z",
+      "action": "LOGIN_SUCCESS",
+      "purpose": "Inicio de sesión de usuario",
+      "resource": "User: user-admin-01"
     }
   ]
 }

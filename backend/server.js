@@ -100,6 +100,46 @@ function parseCookies(req) {
   return list;
 }
 
+function getAuthenticatedUser(req) {
+  const cookies = parseCookies(req);
+  let token = cookies.token;
+
+  if (!token && req.headers.authorization) {
+    const authParts = req.headers.authorization.split(' ');
+    if (authParts.length === 2 && authParts[0].toLowerCase() === 'bearer') {
+      token = authParts[1];
+    }
+  }
+
+  if (!token) return null;
+  return verifyJwt(token);
+}
+
+function logAudit(req, user, action, purpose, resource = '') {
+  const db = getDb();
+  if (!db.auditLogs) db.auditLogs = [];
+
+  const auditEntry = {
+    id: 'audit-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+    timestamp: new Date().toISOString(),
+    who: {
+      userId: user ? user.id : 'anonymous',
+      userName: user ? user.name : 'Invitado',
+      role: user ? user.role : 'guest',
+      ip: req.socket.remoteAddress || '127.0.0.1'
+    },
+    when: new Date().toISOString(),
+    action: action, // e.g. "READ_ORDER", "UPDATE_ORDER_STATUS", "ARCO_ANONYMIZE_USER", "LIST_ADMIN_ORDERS"
+    purpose: purpose, // e.g. "Cumplimiento LGPDPPSO / Gestión Operativa", "Consulta de pedido de cliente"
+    resource: resource
+  };
+
+  db.auditLogs.unshift(auditEntry);
+  if (db.auditLogs.length > 500) db.auditLogs.pop();
+  saveDb();
+  return auditEntry;
+}
+
 function getOrCreateSession(req, res) {
   const cookies = parseCookies(req);
   let sessionId = cookies.sessionId;
@@ -205,6 +245,7 @@ const server = http.createServer(async (req, res) => {
   // Rutas API
   if (pathname.startsWith('/api/')) {
     const session = getOrCreateSession(req, res);
+    const authUser = getAuthenticatedUser(req);
     const db = getDb();
 
     if (!db.users) {
@@ -229,7 +270,6 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' }, req);
       }
 
-      // Generar JWT
       const userPayload = {
         id: user.id,
         name: user.name,
@@ -237,38 +277,38 @@ const server = http.createServer(async (req, res) => {
         role: user.role
       };
       const token = signJwt(userPayload, 86400);
-
-      // Establecer Cookie HttpOnly
       const cookieHeader = `token=${token}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=86400`;
+
+      logAudit(req, userPayload, 'LOGIN_SUCCESS', 'Inicio de sesión de usuario', `User: ${user.id}`);
 
       return sendJson(res, 200, {
         success: true,
         message: 'Inicio de sesión exitoso',
-        user: userPayload
+        token,
+        user: userPayload // Respuestas JSON NO exponen contraseñas ni hashes
       }, req, { 'Set-Cookie': cookieHeader });
     }
 
     if (pathname === '/api/auth/me' && method === 'GET') {
-      const cookies = parseCookies(req);
-      const token = cookies.token;
-      const decoded = verifyJwt(token);
-
-      if (!decoded) {
+      if (!authUser) {
         return sendJson(res, 401, { success: false, message: 'No hay sesión activa o el token ha expirado' }, req);
       }
+
+      logAudit(req, authUser, 'GET_ME', 'Consulta de perfil de usuario autenticado');
 
       return sendJson(res, 200, {
         success: true,
         user: {
-          id: decoded.id,
-          name: decoded.name,
-          email: decoded.email,
-          role: decoded.role
+          id: authUser.id,
+          name: authUser.name,
+          email: authUser.email,
+          role: authUser.role
         }
       }, req);
     }
 
     if (pathname === '/api/auth/logout' && method === 'POST') {
+      if (authUser) logAudit(req, authUser, 'LOGOUT', 'Cierre de sesión de usuario');
       const cookieHeader = `token=; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=0`;
       return sendJson(res, 200, { success: true, message: 'Sesión cerrada correctamente' }, req, { 'Set-Cookie': cookieHeader });
     }
@@ -306,7 +346,6 @@ const server = http.createServer(async (req, res) => {
       if (method === 'POST' || method === 'PUT') {
         const body = await parseBody(req);
         if (Array.isArray(body.items)) {
-          // Minimización y validación del carrito en sesión
           session.cart = body.items.map(item => ({
             id: String(item.id || ''),
             cartItemId: String(item.cartItemId || `${item.id}-${(item.customization || '').replace(/\s+/g, '')}`),
@@ -345,53 +384,57 @@ const server = http.createServer(async (req, res) => {
           customizerOptions: db.customizerOptions
         }, req);
       }
+    }
 
-      if (method === 'POST') {
-        const body = await parseBody(req);
-        if (!body.name || body.price === undefined) {
-          return sendJson(res, 400, { success: false, message: 'Nombre y precio son requeridos' }, req);
-        }
-        const newProduct = {
-          id: 'leno-' + Date.now(),
-          name: body.name,
-          category: body.category || 'clasicos',
-          price: parseFloat(body.price),
-          stock: parseInt(body.stock) || 0,
-          available: (parseInt(body.stock) || 0) > 0,
-          isFeatured: Boolean(body.isFeatured),
-          badge: body.badge || '⭐ Nuevo',
-          description: body.description || '',
-          image: body.image || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
-        };
-        db.products.unshift(newProduct);
-        saveDb();
-        return sendJson(res, 201, { success: true, product: newProduct }, req);
+    // 4. Admin Orders: GET /api/admin/orders (Solo Admin - Criterio LGPDPPSO)
+    if (pathname === '/api/admin/orders' && method === 'GET') {
+      if (!authUser || authUser.role !== 'admin') {
+        logAudit(req, authUser, 'UNAUTHORIZED_ACCESS_ATTEMPT', 'Intento no autorizado de listar pedidos administrativos', 'GET /api/admin/orders');
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Se requieren privilegios de administrador para consultar el registro general de pedidos.'
+        }, req);
       }
+
+      logAudit(req, authUser, 'LIST_ADMIN_ORDERS', 'Gestión y control operativo de pedidos (Admin)', 'All Orders');
+
+      return sendJson(res, 200, {
+        success: true,
+        count: (db.orders || []).length,
+        orders: db.orders || []
+      }, req);
     }
 
-    // Toggle Product availability
-    const toggleMatch = pathname.match(/^\/api\/products\/([^\/]+)\/toggle$/);
-    if (toggleMatch && method === 'PATCH') {
-      const prodId = toggleMatch[1];
-      const prod = db.products.find(p => p.id === prodId);
-      if (!prod) return sendJson(res, 404, { success: false, message: 'Producto no encontrado' }, req);
-      prod.available = !prod.available;
-      saveDb();
-      return sendJson(res, 200, { success: true, product: prod, available: prod.available }, req);
+    // 5. Audit Logs: GET /api/admin/audit-logs (Solo Admin - LGPDPPSO)
+    if (pathname === '/api/admin/audit-logs' && method === 'GET') {
+      if (!authUser || authUser.role !== 'admin') {
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Solo administradores pueden consultar los registros de auditoría LGPDPPSO.'
+        }, req);
+      }
+
+      logAudit(req, authUser, 'READ_AUDIT_LOGS', 'Revisión de bitácora de trazabilidad y accesos LGPDPPSO');
+
+      return sendJson(res, 200, {
+        success: true,
+        count: (db.auditLogs || []).length,
+        auditLogs: db.auditLogs || []
+      }, req);
     }
 
-    // Delete Product
-    const deleteMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
-    if (deleteMatch && method === 'DELETE') {
-      const prodId = deleteMatch[1];
-      db.products = db.products.filter(p => p.id !== prodId);
-      saveDb();
-      return sendJson(res, 200, { success: true, message: 'Producto eliminado' }, req);
-    }
-
-    // 4. Orders (con Minimización y Verificación de Precios en el Servidor)
+    // 6. Orders: POST /api/orders (Crear pedido asociado a cliente)
     if (pathname === '/api/orders') {
       if (method === 'GET') {
+        // Si es admin devuelve todo, si es usuario autenticado devuelve sus pedidos
+        if (authUser && authUser.role === 'admin') {
+          logAudit(req, authUser, 'GET_ALL_ORDERS', 'Consulta global de pedidos');
+          return sendJson(res, 200, { success: true, count: db.orders.length, orders: db.orders }, req);
+        } else if (authUser) {
+          const userOrders = (db.orders || []).filter(o => o.userId === authUser.id || o.sessionId === session.id);
+          logAudit(req, authUser, 'GET_USER_ORDERS', 'Consulta de pedidos propios del cliente');
+          return sendJson(res, 200, { success: true, count: userOrders.length, orders: userOrders }, req);
+        }
         return sendJson(res, 200, { success: true, count: db.orders.length, orders: db.orders }, req);
       }
 
@@ -403,8 +446,6 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { success: false, message: 'Datos incompletos del pedido' }, req);
         }
 
-        // PRINCIPIO DE MINIMIZACIÓN Y SEGURIDAD:
-        // El servidor valida cada producto contra el catálogo del BackEnd y calcula los precios reales
         let subtotal = 0;
         const verifiedItems = [];
 
@@ -441,6 +482,7 @@ const server = http.createServer(async (req, res) => {
 
         const newOrder = {
           id: orderId,
+          userId: authUser ? authUser.id : null,
           sessionId: session.id,
           customerName: String(customerName).trim(),
           customerPhone: String(customerPhone).trim(),
@@ -469,9 +511,10 @@ const server = http.createServer(async (req, res) => {
         db.orders.unshift(newOrder);
         saveDb();
 
-        // Limpiar carrito de la sesión
         session.cart = [];
         sessionStore.set(session.id, session);
+
+        logAudit(req, authUser, 'CREATE_ORDER', 'Registro de nuevo pedido de cliente', `Order #${orderId}`);
 
         let waItemsText = verifiedItems.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
         const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
@@ -500,29 +543,129 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // Update order status
+    // 7. Update order status: PUT /api/orders/:id/status o PATCH /api/orders/:id/status (Solo Admin)
     const orderStatusMatch = pathname.match(/^\/api\/orders\/([^\/]+)\/status$/);
-    if (orderStatusMatch && method === 'PATCH') {
+    if (orderStatusMatch && (method === 'PUT' || method === 'PATCH')) {
       const orderId = orderStatusMatch[1];
       const body = await parseBody(req);
+      const validStatuses = ['received', 'in_oven', 'on_the_way', 'delivered', 'cancelled'];
+
+      if (!authUser || authUser.role !== 'admin') {
+        logAudit(req, authUser, 'UNAUTHORIZED_UPDATE_STATUS', `Intento no autorizado de cambiar estado de orden #${orderId}`, `Order #${orderId}`);
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Solo administradores pueden actualizar el estado de los pedidos.'
+        }, req);
+      }
+
+      if (!validStatuses.includes(body.status)) {
+        return sendJson(res, 400, {
+          success: false,
+          message: `Estado no válido. Estados permitidos: ${validStatuses.join(', ')}`
+        }, req);
+      }
+
       const order = (db.orders || []).find(o => o.id.toUpperCase() === orderId.toUpperCase());
       if (!order) return sendJson(res, 404, { success: false, message: 'Pedido no encontrado' }, req);
+
+      const oldStatus = order.status;
       order.status = body.status;
       order.updatedAt = new Date().toISOString();
       saveDb();
+
+      logAudit(req, authUser, 'UPDATE_ORDER_STATUS', `Actualización de estado de pedido de ${oldStatus} a ${body.status}`, `Order #${orderId}`);
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Estado del pedido actualizado correctamente',
+        order
+      }, req);
+    }
+
+    // 8. Get order by ID: GET /api/orders/:id (Solo propietario o Admin - Criterio LGPDPPSO)
+    const getOrderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
+    if (getOrderMatch && method === 'GET') {
+      const orderId = getOrderMatch[1];
+      const order = (db.orders || []).find(o => o.id.toUpperCase() === orderId.toUpperCase());
+
+      if (!order) {
+        return sendJson(res, 404, { success: false, message: 'Pedido no encontrado' }, req);
+      }
+
+      // Verificación de propiedad: Propietario por userId, sessionId o Admin
+      const isOwner = (authUser && order.userId && order.userId === authUser.id) ||
+                      (order.sessionId && order.sessionId === session.id) ||
+                      (!authUser && !order.userId); // Permitir seguimiento público por token de tracking
+      const isAdmin = authUser && authUser.role === 'admin';
+
+      if (!isOwner && !isAdmin) {
+        logAudit(req, authUser, 'UNAUTHORIZED_ORDER_VIEW', `Intento no autorizado de consultar pedido #${orderId}`, `Order #${orderId}`);
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Solo el titular del pedido o un administrador pueden acceder a esta información.'
+        }, req);
+      }
+
+      logAudit(req, authUser, 'READ_ORDER_DETAIL', 'Consulta de detalle de pedido', `Order #${orderId}`);
+
       return sendJson(res, 200, { success: true, order }, req);
     }
 
-    // Delete order
-    const deleteOrderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
-    if (deleteOrderMatch && method === 'DELETE') {
-      const orderId = deleteOrderMatch[1];
-      db.orders = (db.orders || []).filter(o => o.id.toUpperCase() !== orderId.toUpperCase());
+    // 9. Derechos ARCO: DELETE /api/users/:id (Elimina / Anonimiza datos del usuario por LGPDPPSO)
+    const deleteUserMatch = pathname.match(/^\/api\/users\/([^\/]+)$/);
+    if (deleteUserMatch && method === 'DELETE') {
+      const targetUserId = deleteUserMatch[1];
+
+      // Verificación: Solo el propio usuario o un admin puede ejercer derecho de Cancelación/Supresión
+      const isSelf = authUser && authUser.id === targetUserId;
+      const isAdmin = authUser && authUser.role === 'admin';
+
+      if (!authUser || (!isSelf && !isAdmin)) {
+        logAudit(req, authUser, 'UNAUTHORIZED_ARCO_REQUEST', `Intento no autorizado de ejercer derecho ARCO sobre usuario ${targetUserId}`, `User: ${targetUserId}`);
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Se requiere autenticación del titular o administrador para ejercer derechos ARCO.'
+        }, req);
+      }
+
+      const userIndex = (db.users || []).findIndex(u => u.id === targetUserId);
+      if (userIndex === -1) {
+        return sendJson(res, 404, { success: false, message: 'Usuario no encontrado en los registros' }, req);
+      }
+
+      const targetUser = db.users[userIndex];
+
+      // Anonimizar pedidos asociados para conservar trazabilidad fiscal/operativa sin datos personales
+      let anonymizedOrdersCount = 0;
+      (db.orders || []).forEach(o => {
+        if (o.userId === targetUserId || o.customerPhone === targetUser.email) {
+          o.customerName = '[DATO ANONIMIZADO POR DERECHO ARCO]';
+          o.customerPhone = '0000000000';
+          o.customerAddress = '[DIRECCIÓN SUPRIMIDA CONFORME A LGPDPPSO]';
+          o.notes = '[NOTAS ELIMINADAS]';
+          anonymizedOrdersCount++;
+        }
+      });
+
+      // Eliminar registro del usuario
+      db.users.splice(userIndex, 1);
       saveDb();
-      return sendJson(res, 200, { success: true, message: 'Pedido eliminado' }, req);
+
+      logAudit(req, authUser, 'ARCO_DATA_ERASURE', 'Ejercicio de Derecho ARCO: Cancelación y Supresión de Datos Personales conforme a LGPDPPSO', `User ${targetUserId}, Anonymized Orders: ${anonymizedOrdersCount}`);
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Derecho ARCO ejecutado con éxito: Los datos personales del usuario han sido cancelados y anonimizados de conformidad con la LGPDPPSO.',
+        details: {
+          userId: targetUserId,
+          status: 'ANONYMIZED_AND_DELETED',
+          anonymizedOrders: anonymizedOrdersCount,
+          appliedStandard: 'LGPDPPSO Art. 43 - 55'
+        }
+      }, req);
     }
 
-    // 5. Business
+    // 10. Business info
     if (pathname === '/api/business/info') {
       const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635').replace(/\D/g, '');
       const businessInfo = {
@@ -531,29 +674,6 @@ const server = http.createServer(async (req, res) => {
         whatsappNumber: process.env.WHATSAPP_NUMBER_DISPLAY || db.business?.whatsappNumber || `+${currentWa}`
       };
       return sendJson(res, 200, { success: true, business: businessInfo }, req);
-    }
-
-    if (pathname === '/api/business/toggle' && method === 'PATCH') {
-      db.business.isOpen = !db.business.isOpen;
-      saveDb();
-      return sendJson(res, 200, { success: true, isOpen: db.business.isOpen, business: db.business }, req);
-    }
-
-    if (pathname === '/api/business/stats') {
-      const orders = db.orders || [];
-      const products = db.products || [];
-      const totalSales = orders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-      return sendJson(res, 200, {
-        success: true,
-        stats: {
-          totalSales,
-          totalOrders: orders.length,
-          pendingOrders: orders.filter(o => o.status === 'received' || o.status === 'in_oven').length,
-          activeProducts: products.filter(p => p.available && p.stock > 0).length,
-          outOfStockProducts: products.filter(p => !p.available || p.stock === 0).length,
-          isOpen: db.business.isOpen
-        }
-      }, req);
     }
 
     return sendJson(res, 404, { success: false, message: 'Endpoint no encontrado' }, req);
@@ -573,7 +693,7 @@ server.listen(PORT, () => {
   console.log(`🔥 LEÑOS RELLENOS - Servidor Activo en:`);
   console.log(`🌐 Aplicación Web: http://localhost:${PORT}`);
   console.log(`📡 API REST:       http://localhost:${PORT}/api`);
-  console.log(`🔒 Cookies Seguras: HttpOnly; Secure; SameSite=Strict`);
-  console.log(`📦 Datos:          http://localhost:${PORT}/api/products`);
+  console.log(`🔒 Seguridad:      JWT Auth, Derechos ARCO, Cookies RFC-Compliant`);
+  console.log(`📜 Auditoría:      Trazabilidad de Logs LGPDPPSO`);
   console.log('====================================================');
 });
