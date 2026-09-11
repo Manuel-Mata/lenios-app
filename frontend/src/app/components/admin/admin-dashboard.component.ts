@@ -254,7 +254,7 @@ import { SanitizerService } from '../../services/sanitizer.service';
       </div>
 
       <ng-template #spinner>
-        <div class="loading-box">🔥 Conectando con la base de datos...</div>
+        <div class="loading-box">🔥 Cargando...</div>
       </ng-template>
     </section>
   `,

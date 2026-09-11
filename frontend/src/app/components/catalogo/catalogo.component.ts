@@ -87,7 +87,7 @@ import { CarritoService } from '../../services/carrito.service';
 
       <ng-template #spinner>
         <div class="loading-box">
-          <p>🔥 Conectando con la base de datos en puerto 3000...</p>
+          <p>🔥 Cargando ...</p>
         </div>
       </ng-template>
     </section>
