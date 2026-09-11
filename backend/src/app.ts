@@ -29,18 +29,26 @@ const allowedOrigins = [
   'http://127.0.0.1:4200',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5000',
-  'https://tu-frontend-en-render.onrender.com', // <--- ¡Pon aquí la URL real de tu frontend si ya está desplegado!
+  'https://lenios-app-opal.vercel.app',
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Si no hay origin (como Postman o curl) o está en la lista / es local, lo dejamos pasar
-      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Cambiado temporalmente a true para evitar bloqueos drásticos mientras pruebas
+      // Si no hay origin (Postman, curl, server-to-server) dejamos pasar
+      if (!origin) {
+        return callback(null, true);
       }
+      // Si está en la lista de origenes permitidos o es localhost, lo dejamos pasar
+      if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        // IMPORTANTE: devolver el origin exacto (no 'true') para que funcione con credentials
+        return callback(null, origin);
+      }
+      // En desarrollo dejamos pasar todo, en producción bloqueamos
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, origin);
+      }
+      callback(new Error(`Origin ${origin} no permitido por CORS`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
