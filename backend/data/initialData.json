@@ -44,6 +44,18 @@
   ],
   "products": [
     {
+      "id": "leno-1789103625042",
+      "name": "Leño Gourmet de Costilla BBQ",
+      "category": "gourmet",
+      "price": 115,
+      "stock": 20,
+      "available": true,
+      "isFeatured": false,
+      "badge": "⭐ Nuevo",
+      "description": "Costilla horneada a la leña",
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"
+    },
+    {
       "id": "leno-arrachera",
       "name": "Leño de Arrachera Ahumada",
       "category": "gourmet",
@@ -438,6 +450,118 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1789103625049-907",
+      "timestamp": "2026-09-11T05:13:45.049Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.049Z",
+      "action": "ARCO_DATA_ERASURE",
+      "purpose": "Ejercicio de Derecho ARCO: Cancelación y Supresión de Datos Personales conforme a LGPDPPSO",
+      "resource": "User user-1789103625025, Anonymized Orders: 0"
+    },
+    {
+      "id": "audit-1789103625045-812",
+      "timestamp": "2026-09-11T05:13:45.045Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.045Z",
+      "action": "LIST_ADMIN_ORDERS",
+      "purpose": "Consulta general de pedidos de clientes",
+      "resource": ""
+    },
+    {
+      "id": "audit-1789103625043-760",
+      "timestamp": "2026-09-11T05:13:45.043Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.043Z",
+      "action": "CREATE_PRODUCT",
+      "purpose": "Creación de nuevo producto: Leño Gourmet de Costilla BBQ",
+      "resource": "Product: leno-1789103625042"
+    },
+    {
+      "id": "audit-1789103625039-277",
+      "timestamp": "2026-09-11T05:13:45.039Z",
+      "who": {
+        "userId": "user-1789103625025",
+        "userName": "Cliente Prueba Bcrypt",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.039Z",
+      "action": "UNAUTHORIZED_CREATE_PRODUCT",
+      "purpose": "Intento no autorizado de agregar producto",
+      "resource": "POST /api/products"
+    },
+    {
+      "id": "audit-1789103625037-264",
+      "timestamp": "2026-09-11T05:13:45.037Z",
+      "who": {
+        "userId": "user-1789103625025",
+        "userName": "Cliente Prueba Bcrypt",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.037Z",
+      "action": "GET_ME",
+      "purpose": "Consulta de perfil de usuario autenticado",
+      "resource": ""
+    },
+    {
+      "id": "audit-1789103625035-161",
+      "timestamp": "2026-09-11T05:13:45.035Z",
+      "who": {
+        "userId": "user-1789103625025",
+        "userName": "Cliente Prueba Bcrypt",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.035Z",
+      "action": "TOKEN_REFRESH",
+      "purpose": "Renovación exitosa de Access Token mediante Refresh Token",
+      "resource": "User: user-1789103625025"
+    },
+    {
+      "id": "audit-1789103625032-403",
+      "timestamp": "2026-09-11T05:13:45.032Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.032Z",
+      "action": "LOGIN_SUCCESS",
+      "purpose": "Inicio de sesión exitoso con JWT firmado",
+      "resource": "User: user-admin-01"
+    },
+    {
+      "id": "audit-1789103625027-995",
+      "timestamp": "2026-09-11T05:13:45.027Z",
+      "who": {
+        "userId": "user-1789103625025",
+        "userName": "Cliente Prueba Bcrypt",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:13:45.027Z",
+      "action": "USER_REGISTER",
+      "purpose": "Registro de nuevo usuario con rol cliente",
+      "resource": "User: user-1789103625025"
+    },
     {
       "id": "audit-1789102216922-700",
       "timestamp": "2026-09-11T04:50:16.922Z",

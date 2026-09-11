@@ -3,10 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { getDb, saveDb } = require('./config/db');
+const { hash, compare, SALT_ROUNDS } = require('./config/bcrypt');
 
 const PORT = process.env.PORT || 5000;
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 const JWT_SECRET = process.env.JWT_SECRET || 'lenios_rellenos_super_secret_jwt_key_2026';
+const ACCESS_TOKEN_EXPIRES_IN = parseInt(process.env.ACCESS_TOKEN_EXPIRES_IN) || 3600; // 1 hora
+const REFRESH_TOKEN_EXPIRES_IN = parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN) || 604800; // 7 días
 
 // Almacén de sesiones en memoria
 const sessionStore = new Map();
@@ -41,10 +44,11 @@ function base64UrlDecode(str) {
   return Buffer.from(output, 'base64').toString();
 }
 
-function signJwt(payload, expiresInSeconds = 86400) {
+function signJwt(payload, expiresInSeconds = ACCESS_TOKEN_EXPIRES_IN) {
   const header = { alg: 'HS256', typ: 'JWT' };
   const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
-  const fullPayload = { ...payload, exp };
+  const iat = Math.floor(Date.now() / 1000);
+  const fullPayload = { ...payload, iat, exp };
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
   const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
@@ -112,7 +116,9 @@ function getAuthenticatedUser(req) {
   }
 
   if (!token) return null;
-  return verifyJwt(token);
+  const decoded = verifyJwt(token);
+  if (!decoded || decoded.type === 'refresh') return null;
+  return decoded;
 }
 
 function logAudit(req, user, action, purpose, resource = '') {
@@ -123,14 +129,14 @@ function logAudit(req, user, action, purpose, resource = '') {
     id: 'audit-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
     timestamp: new Date().toISOString(),
     who: {
-      userId: user ? user.id : 'anonymous',
+      userId: user ? (user.id || user.sub) : 'anonymous',
       userName: user ? user.name : 'Invitado',
       role: user ? user.role : 'guest',
       ip: req.socket.remoteAddress || '127.0.0.1'
     },
     when: new Date().toISOString(),
-    action: action, // e.g. "READ_ORDER", "UPDATE_ORDER_STATUS", "ARCO_ANONYMIZE_USER", "LIST_ADMIN_ORDERS"
-    purpose: purpose, // e.g. "Cumplimiento LGPDPPSO / Gestión Operativa", "Consulta de pedido de cliente"
+    action: action,
+    purpose: purpose,
     resource: resource
   };
 
@@ -160,7 +166,6 @@ function getOrCreateSession(req, res) {
     session.updatedAt = new Date().toISOString();
   }
 
-  // Establecer cookie con atributos Secure, HttpOnly y SameSite=Strict
   if (isNew || !cookies.sessionId) {
     const cookieHeader = `sessionId=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=86400`;
     res.setHeader('Set-Cookie', cookieHeader);
@@ -248,25 +253,137 @@ const server = http.createServer(async (req, res) => {
     const authUser = getAuthenticatedUser(req);
     const db = getDb();
 
-    if (!db.users) {
+    // Inicializar usuarios por defecto con Bcrypt (12 rounds) si no existen
+    if (!db.users || db.users.length === 0) {
       db.users = [
-        { id: 'user-admin-01', name: 'Administrador Leños', email: 'admin@lenios.com', password: 'admin123', role: 'admin' },
-        { id: 'user-client-01', name: 'Carlos Rodríguez', email: 'cliente@lenios.com', password: 'cliente123', role: 'customer' }
+        {
+          id: 'user-admin-01',
+          name: 'Administrador Leños',
+          email: 'admin@lenios.com',
+          password: '$2b$12$e7f2b4d1171de232ca76d7f20eb3e57c$97d80aa6ae2ac491c5a8406db20411ee098924d571d754516394598c580f6315cca73490967be1d38c775bfb414e607fab18db454e5c990f1d86d1728f2279c0', // 'admin123'
+          role: 'admin',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'user-client-01',
+          name: 'Carlos Rodríguez',
+          email: 'cliente@lenios.com',
+          password: '$2b$12$5669b465ce760f7e3864689bd378a2e4$09f05cba7bd80e158bbf266e7f6008e0d2cb41ddef8e196a77a64c3e71bc3579b3f184c84e20ddd6d9cd8439db8273c10e3f56f0953fcaf3c05290eed916b29c', // 'cliente123'
+          role: 'cliente',
+          createdAt: new Date().toISOString()
+        }
       ];
+      saveDb();
     }
 
-    // 0. Autenticación (Auth)
+    // =========================================================================
+    // 0. AUTENTICACIÓN Y AUTORIZACIÓN (REGISTER, LOGIN, REFRESH, LOGOUT, ME)
+    // =========================================================================
+
+    // 0.1 POST /api/auth/register — Registro con hashing bcrypt (mínimo 12 rounds)
+    if (pathname === '/api/auth/register' && method === 'POST') {
+      const body = await parseBody(req);
+      const name = String(body.name || '').trim();
+      const email = String(body.email || '').toLowerCase().trim();
+      const password = String(body.password || '').trim();
+      const role = (body.role === 'admin' ? 'admin' : 'cliente'); // Roles definidos: admin y cliente
+
+      if (!name || !email || !password) {
+        return sendJson(res, 400, {
+          success: false,
+          message: 'Nombre, correo electrónico y contraseña son obligatorios.'
+        }, req);
+      }
+
+      if (password.length < 6) {
+        return sendJson(res, 400, {
+          success: false,
+          message: 'La contraseña debe contener al menos 6 caracteres.'
+        }, req);
+      }
+
+      // Validar si el correo ya está registrado
+      const existingUser = db.users.find(u => u.email.toLowerCase() === email);
+      if (existingUser) {
+        return sendJson(res, 409, {
+          success: false,
+          message: 'El correo electrónico ya se encuentra registrado.'
+        }, req);
+      }
+
+      // Hashing de contraseña con Bcrypt usando mínimo 12 rounds
+      const hashedPassword = await hash(password, SALT_ROUNDS);
+
+      const newUser = {
+        id: 'user-' + Date.now(),
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        createdAt: new Date().toISOString()
+      };
+
+      db.users.push(newUser);
+      saveDb();
+
+      // Generar Access Token y Refresh Token
+      const userPayload = {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        type: 'access'
+      };
+      const accessToken = signJwt(userPayload, ACCESS_TOKEN_EXPIRES_IN);
+
+      const refreshPayload = {
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        type: 'refresh'
+      };
+      const refreshToken = signJwt(refreshPayload, REFRESH_TOKEN_EXPIRES_IN);
+
+      const accessCookie = `token=${accessToken}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}`;
+      const refreshCookie = `refreshToken=${refreshToken}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}`;
+
+      logAudit(req, userPayload, 'USER_REGISTER', `Registro de nuevo usuario con rol ${role}`, `User: ${newUser.id}`);
+
+      return sendJson(res, 201, {
+        success: true,
+        message: 'Usuario registrado exitosamente con hashing Bcrypt (12 rounds)',
+        accessToken,
+        refreshToken,
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role
+        }
+      }, req, {
+        'Set-Cookie': [accessCookie, refreshCookie]
+      });
+    }
+
+    // 0.2 POST /api/auth/login — Login devuelve JWT firmado y tokens configurados
     if (pathname === '/api/auth/login' && method === 'POST') {
       const body = await parseBody(req);
-      const email = (body.email || '').toLowerCase().trim();
-      const password = (body.password || '').trim();
+      const email = String(body.email || '').toLowerCase().trim();
+      const password = String(body.password || '').trim();
 
       if (!email || !password) {
         return sendJson(res, 400, { success: false, message: 'Correo y contraseña requeridos' }, req);
       }
 
-      const user = db.users.find(u => u.email.toLowerCase() === email && u.password === password);
+      const user = db.users.find(u => u.email.toLowerCase() === email);
       if (!user) {
+        return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' }, req);
+      }
+
+      // Verificación de hash Bcrypt
+      const isValidPassword = await compare(password, user.password);
+      if (!isValidPassword) {
         return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' }, req);
       }
 
@@ -274,21 +391,100 @@ const server = http.createServer(async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        type: 'access'
       };
-      const token = signJwt(userPayload, 86400);
-      const cookieHeader = `token=${token}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=86400`;
+      const accessToken = signJwt(userPayload, ACCESS_TOKEN_EXPIRES_IN);
 
-      logAudit(req, userPayload, 'LOGIN_SUCCESS', 'Inicio de sesión de usuario', `User: ${user.id}`);
+      const refreshPayload = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        type: 'refresh'
+      };
+      const refreshToken = signJwt(refreshPayload, REFRESH_TOKEN_EXPIRES_IN);
+
+      const accessCookie = `token=${accessToken}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}`;
+      const refreshCookie = `refreshToken=${refreshToken}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=${REFRESH_TOKEN_EXPIRES_IN}`;
+
+      logAudit(req, userPayload, 'LOGIN_SUCCESS', 'Inicio de sesión exitoso con JWT firmado', `User: ${user.id}`);
 
       return sendJson(res, 200, {
         success: true,
         message: 'Inicio de sesión exitoso',
-        token,
-        user: userPayload // Respuestas JSON NO exponen contraseñas ni hashes
-      }, req, { 'Set-Cookie': cookieHeader });
+        accessToken,
+        refreshToken,
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      }, req, {
+        'Set-Cookie': [accessCookie, refreshCookie]
+      });
     }
 
+    // 0.3 POST /api/auth/refresh — Refresco de Token de Acceso
+    if (pathname === '/api/auth/refresh' && method === 'POST') {
+      const body = await parseBody(req);
+      const cookies = parseCookies(req);
+      const tokenToRefresh = body.refreshToken || cookies.refreshToken;
+
+      if (!tokenToRefresh) {
+        return sendJson(res, 400, {
+          success: false,
+          message: 'Refresh Token requerido para renovar la sesión.'
+        }, req);
+      }
+
+      const decoded = verifyJwt(tokenToRefresh);
+      if (!decoded || decoded.type !== 'refresh') {
+        return sendJson(res, 401, {
+          success: false,
+          message: 'Refresh Token inválido o expirado. Por favor inicia sesión nuevamente.'
+        }, req);
+      }
+
+      const user = db.users.find(u => u.id === decoded.id);
+      if (!user) {
+        return sendJson(res, 404, {
+          success: false,
+          message: 'El usuario asociado al token no existe.'
+        }, req);
+      }
+
+      // Generar nuevo Access Token firmado
+      const newAccessPayload = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        type: 'access'
+      };
+      const newAccessToken = signJwt(newAccessPayload, ACCESS_TOKEN_EXPIRES_IN);
+      const accessCookie = `token=${newAccessToken}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=${ACCESS_TOKEN_EXPIRES_IN}`;
+
+      logAudit(req, newAccessPayload, 'TOKEN_REFRESH', 'Renovación exitosa de Access Token mediante Refresh Token', `User: ${user.id}`);
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Token de acceso renovado exitosamente',
+        accessToken: newAccessToken,
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      }, req, {
+        'Set-Cookie': accessCookie
+      });
+    }
+
+    // 0.4 GET /api/auth/me — Perfil de usuario autenticado
     if (pathname === '/api/auth/me' && method === 'GET') {
       if (!authUser) {
         return sendJson(res, 401, { success: false, message: 'No hay sesión activa o el token ha expirado' }, req);
@@ -307,13 +503,19 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
+    // 0.5 POST /api/auth/logout — Cerrar sesión
     if (pathname === '/api/auth/logout' && method === 'POST') {
       if (authUser) logAudit(req, authUser, 'LOGOUT', 'Cierre de sesión de usuario');
-      const cookieHeader = `token=; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=0`;
-      return sendJson(res, 200, { success: true, message: 'Sesión cerrada correctamente' }, req, { 'Set-Cookie': cookieHeader });
+      const cookie1 = `token=; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=0`;
+      const cookie2 = `refreshToken=; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=0`;
+      return sendJson(res, 200, { success: true, message: 'Sesión cerrada correctamente' }, req, {
+        'Set-Cookie': [cookie1, cookie2]
+      });
     }
 
-    // 1. Health & Session Check
+    // =========================================================================
+    // 1. HEALTH & SESSION ENDPOINTS
+    // =========================================================================
     if (pathname === '/api/health') {
       return sendJson(res, 200, {
         status: 'online',
@@ -324,7 +526,6 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 2. Session Management Endpoint
     if (pathname === '/api/session') {
       if (method === 'GET') {
         return sendJson(res, 200, {
@@ -362,8 +563,11 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // 3. Products
+    // =========================================================================
+    // 2. PRODUCTOS (CATÁLOGO PÚBLICO & GESTIÓN SOLO ADMIN)
+    // =========================================================================
     if (pathname === '/api/products') {
+      // Lectura del catálogo es pública
       if (method === 'GET') {
         const category = parsedUrl.searchParams.get('category');
         const featured = parsedUrl.searchParams.get('featured');
@@ -384,19 +588,97 @@ const server = http.createServer(async (req, res) => {
           customizerOptions: db.customizerOptions
         }, req);
       }
+
+      // Creación de productos: SOLO ROL ADMIN
+      if (method === 'POST') {
+        if (!authUser || authUser.role !== 'admin') {
+          logAudit(req, authUser, 'UNAUTHORIZED_CREATE_PRODUCT', 'Intento no autorizado de agregar producto', 'POST /api/products');
+          return sendJson(res, 403, {
+            success: false,
+            message: 'Acceso denegado. Solo administradores pueden agregar productos al catálogo.'
+          }, req);
+        }
+
+        const body = await parseBody(req);
+        if (!body.name || body.price === undefined) {
+          return sendJson(res, 400, { success: false, message: 'Nombre y precio son requeridos' }, req);
+        }
+        const newProduct = {
+          id: 'leno-' + Date.now(),
+          name: body.name,
+          category: body.category || 'clasicos',
+          price: parseFloat(body.price),
+          stock: parseInt(body.stock) || 0,
+          available: (parseInt(body.stock) || 0) > 0,
+          isFeatured: Boolean(body.isFeatured),
+          badge: body.badge || '⭐ Nuevo',
+          description: body.description || '',
+          image: body.image || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
+        };
+        db.products.unshift(newProduct);
+        saveDb();
+
+        logAudit(req, authUser, 'CREATE_PRODUCT', `Creación de nuevo producto: ${newProduct.name}`, `Product: ${newProduct.id}`);
+
+        return sendJson(res, 201, { success: true, product: newProduct }, req);
+      }
     }
 
-    // 4. Admin Orders: GET /api/admin/orders (Solo Admin - Criterio LGPDPPSO)
-    if (pathname === '/api/admin/orders' && method === 'GET') {
+    // Toggle disponibilidad de producto: SOLO ROL ADMIN
+    const toggleMatch = pathname.match(/^\/api\/products\/([^\/]+)\/toggle$/);
+    if (toggleMatch && method === 'PATCH') {
       if (!authUser || authUser.role !== 'admin') {
-        logAudit(req, authUser, 'UNAUTHORIZED_ACCESS_ATTEMPT', 'Intento no autorizado de listar pedidos administrativos', 'GET /api/admin/orders');
         return sendJson(res, 403, {
           success: false,
-          message: 'Acceso denegado. Se requieren privilegios de administrador para consultar el registro general de pedidos.'
+          message: 'Acceso denegado. Solo administradores pueden modificar la disponibilidad de productos.'
         }, req);
       }
 
-      logAudit(req, authUser, 'LIST_ADMIN_ORDERS', 'Gestión y control operativo de pedidos (Admin)', 'All Orders');
+      const prodId = toggleMatch[1];
+      const prod = db.products.find(p => p.id === prodId);
+      if (!prod) return sendJson(res, 404, { success: false, message: 'Producto no encontrado' }, req);
+      prod.available = !prod.available;
+      saveDb();
+
+      logAudit(req, authUser, 'TOGGLE_PRODUCT_AVAILABILITY', `Disponibilidad cambiada a ${prod.available}`, `Product: ${prodId}`);
+
+      return sendJson(res, 200, { success: true, product: prod, available: prod.available }, req);
+    }
+
+    // Eliminar producto: SOLO ROL ADMIN
+    const deleteMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
+    if (deleteMatch && method === 'DELETE') {
+      if (!authUser || authUser.role !== 'admin') {
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Solo administradores pueden eliminar productos.'
+        }, req);
+      }
+
+      const prodId = deleteMatch[1];
+      db.products = db.products.filter(p => p.id !== prodId);
+      saveDb();
+
+      logAudit(req, authUser, 'DELETE_PRODUCT', 'Eliminación de producto del catálogo', `Product: ${prodId}`);
+
+      return sendJson(res, 200, { success: true, message: 'Producto eliminado correctamente' }, req);
+    }
+
+    // =========================================================================
+    // 3. GESTIÓN DE PEDIDOS Y PANEL DE ADMINISTRACIÓN
+    // =========================================================================
+
+    // 3.1 GET /api/admin/orders — Lista todos los pedidos (SOLO ROL ADMIN)
+    if (pathname === '/api/admin/orders' && method === 'GET') {
+      if (!authUser || authUser.role !== 'admin') {
+        logAudit(req, authUser, 'UNAUTHORIZED_ACCESS_ATTEMPT', 'Intento no autorizado de consultar lista general de pedidos', 'GET /api/admin/orders');
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Se requiere rol de administrador para consultar el registro general de pedidos.'
+        }, req);
+      }
+
+      logAudit(req, authUser, 'LIST_ADMIN_ORDERS', 'Consulta general de pedidos de clientes');
 
       return sendJson(res, 200, {
         success: true,
@@ -405,7 +687,7 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 5. Audit Logs: GET /api/admin/audit-logs (Solo Admin - LGPDPPSO)
+    // 3.2 GET /api/admin/audit-logs — Bitácora de auditoría LGPDPPSO (SOLO ROL ADMIN)
     if (pathname === '/api/admin/audit-logs' && method === 'GET') {
       if (!authUser || authUser.role !== 'admin') {
         return sendJson(res, 403, {
@@ -423,10 +705,9 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 6. Orders: POST /api/orders (Crear pedido asociado a cliente)
+    // 3.3 POST /api/orders — Crear nuevo pedido asociado al cliente con Minimización
     if (pathname === '/api/orders') {
       if (method === 'GET') {
-        // Si es admin devuelve todo, si es usuario autenticado devuelve sus pedidos
         if (authUser && authUser.role === 'admin') {
           logAudit(req, authUser, 'GET_ALL_ORDERS', 'Consulta global de pedidos');
           return sendJson(res, 200, { success: true, count: db.orders.length, orders: db.orders }, req);
@@ -514,7 +795,7 @@ const server = http.createServer(async (req, res) => {
         session.cart = [];
         sessionStore.set(session.id, session);
 
-        logAudit(req, authUser, 'CREATE_ORDER', 'Registro de nuevo pedido de cliente', `Order #${orderId}`);
+        logAudit(req, authUser, 'CREATE_ORDER', 'Creación de nuevo pedido asociado al cliente', `Order #${orderId}`);
 
         let waItemsText = verifiedItems.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
         const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
@@ -543,7 +824,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // 7. Update order status: PUT /api/orders/:id/status o PATCH /api/orders/:id/status (Solo Admin)
+    // 3.4 Actualizar estado del pedido: PUT /api/orders/:id/status o PATCH (SOLO ROL ADMIN)
     const orderStatusMatch = pathname.match(/^\/api\/orders\/([^\/]+)\/status$/);
     if (orderStatusMatch && (method === 'PUT' || method === 'PATCH')) {
       const orderId = orderStatusMatch[1];
@@ -551,7 +832,7 @@ const server = http.createServer(async (req, res) => {
       const validStatuses = ['received', 'in_oven', 'on_the_way', 'delivered', 'cancelled'];
 
       if (!authUser || authUser.role !== 'admin') {
-        logAudit(req, authUser, 'UNAUTHORIZED_UPDATE_STATUS', `Intento no autorizado de cambiar estado de orden #${orderId}`, `Order #${orderId}`);
+        logAudit(req, authUser, 'UNAUTHORIZED_STATUS_UPDATE', `Intento no autorizado de cambiar estado de orden #${orderId}`, `Order #${orderId}`);
         return sendJson(res, 403, {
           success: false,
           message: 'Acceso denegado. Solo administradores pueden actualizar el estado de los pedidos.'
@@ -573,7 +854,7 @@ const server = http.createServer(async (req, res) => {
       order.updatedAt = new Date().toISOString();
       saveDb();
 
-      logAudit(req, authUser, 'UPDATE_ORDER_STATUS', `Actualización de estado de pedido de ${oldStatus} a ${body.status}`, `Order #${orderId}`);
+      logAudit(req, authUser, 'UPDATE_ORDER_STATUS', `Estado de pedido actualizado de ${oldStatus} a ${body.status}`, `Order #${orderId}`);
 
       return sendJson(res, 200, {
         success: true,
@@ -582,7 +863,7 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 8. Get order by ID: GET /api/orders/:id (Solo propietario o Admin - Criterio LGPDPPSO)
+    // 3.5 Obtener pedido por ID: GET /api/orders/:id (Solo propietario o Admin)
     const getOrderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
     if (getOrderMatch && method === 'GET') {
       const orderId = getOrderMatch[1];
@@ -592,10 +873,9 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 404, { success: false, message: 'Pedido no encontrado' }, req);
       }
 
-      // Verificación de propiedad: Propietario por userId, sessionId o Admin
       const isOwner = (authUser && order.userId && order.userId === authUser.id) ||
                       (order.sessionId && order.sessionId === session.id) ||
-                      (!authUser && !order.userId); // Permitir seguimiento público por token de tracking
+                      (!authUser && !order.userId);
       const isAdmin = authUser && authUser.role === 'admin';
 
       if (!isOwner && !isAdmin) {
@@ -606,17 +886,36 @@ const server = http.createServer(async (req, res) => {
         }, req);
       }
 
-      logAudit(req, authUser, 'READ_ORDER_DETAIL', 'Consulta de detalle de pedido', `Order #${orderId}`);
+      logAudit(req, authUser, 'READ_ORDER_DETAIL', 'Consulta autorizada de detalle de pedido', `Order #${orderId}`);
 
       return sendJson(res, 200, { success: true, order }, req);
     }
 
-    // 9. Derechos ARCO: DELETE /api/users/:id (Elimina / Anonimiza datos del usuario por LGPDPPSO)
+    // 3.6 Eliminar pedido: DELETE /api/orders/:id (SOLO ROL ADMIN)
+    const deleteOrderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
+    if (deleteOrderMatch && method === 'DELETE') {
+      if (!authUser || authUser.role !== 'admin') {
+        return sendJson(res, 403, {
+          success: false,
+          message: 'Acceso denegado. Solo administradores pueden eliminar pedidos.'
+        }, req);
+      }
+
+      const orderId = deleteOrderMatch[1];
+      db.orders = (db.orders || []).filter(o => o.id.toUpperCase() !== orderId.toUpperCase());
+      saveDb();
+
+      logAudit(req, authUser, 'DELETE_ORDER', 'Eliminación administrativa de pedido', `Order #${orderId}`);
+
+      return sendJson(res, 200, { success: true, message: 'Pedido eliminado correctamente' }, req);
+    }
+
+    // =========================================================================
+    // 4. DERECHOS ARCO: DELETE /api/users/:id
+    // =========================================================================
     const deleteUserMatch = pathname.match(/^\/api\/users\/([^\/]+)$/);
     if (deleteUserMatch && method === 'DELETE') {
       const targetUserId = deleteUserMatch[1];
-
-      // Verificación: Solo el propio usuario o un admin puede ejercer derecho de Cancelación/Supresión
       const isSelf = authUser && authUser.id === targetUserId;
       const isAdmin = authUser && authUser.role === 'admin';
 
@@ -635,7 +934,6 @@ const server = http.createServer(async (req, res) => {
 
       const targetUser = db.users[userIndex];
 
-      // Anonimizar pedidos asociados para conservar trazabilidad fiscal/operativa sin datos personales
       let anonymizedOrdersCount = 0;
       (db.orders || []).forEach(o => {
         if (o.userId === targetUserId || o.customerPhone === targetUser.email) {
@@ -647,7 +945,6 @@ const server = http.createServer(async (req, res) => {
         }
       });
 
-      // Eliminar registro del usuario
       db.users.splice(userIndex, 1);
       saveDb();
 
@@ -665,7 +962,9 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 10. Business info
+    // =========================================================================
+    // 5. BUSINESS INFO & STATUS
+    // =========================================================================
     if (pathname === '/api/business/info') {
       const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635').replace(/\D/g, '');
       const businessInfo = {
@@ -693,7 +992,8 @@ server.listen(PORT, () => {
   console.log(`🔥 LEÑOS RELLENOS - Servidor Activo en:`);
   console.log(`🌐 Aplicación Web: http://localhost:${PORT}`);
   console.log(`📡 API REST:       http://localhost:${PORT}/api`);
-  console.log(`🔒 Seguridad:      JWT Auth, Derechos ARCO, Cookies RFC-Compliant`);
+  console.log(`🔒 Auth & Tokens:  Bcrypt (12 rounds) + JWT (Access/Refresh)`);
+  console.log(`🛡️ Roles:          admin & cliente (RBAC estricto)`);
   console.log(`📜 Auditoría:      Trazabilidad de Logs LGPDPPSO`);
   console.log('====================================================');
 });

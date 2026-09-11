@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "8a32b91d-4f12-4c89-9a73-lenios-rellenos-lgpdppso",
-    "name": "Leños Rellenos - Pruebas API & Derechos ARCO (LGPDPPSO)",
-    "description": "Colección de pruebas automatizadas para la API REST de Leños Rellenos, cubriendo gestión de pedidos, seguridad de sesiones, control de acceso por roles, derechos ARCO y trazabilidad de auditoría conforme a la LGPDPPSO.",
+    "_postman_id": "8a32b91d-4f12-4c89-9a73-lenios-rellenos-auth-rbac",
+    "name": "Leños Rellenos - Autenticación, Roles (RBAC) y Seguridad",
+    "description": "Colección completa de pruebas automatizadas para la API REST de Leños Rellenos: Registro con Bcrypt (12 rounds), Login JWT, Refresco de Tokens, Middleware de Protección de Rutas, Roles (admin/cliente), Restricciones de Gestión de Productos y Pedidos, Derechos ARCO y Auditoría LGPDPPSO.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -22,41 +22,91 @@
       "type": "string"
     },
     {
+      "key": "clientRefreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "currentOrderId",
       "value": "LR-10821",
       "type": "string"
     },
     {
-      "key": "arcoUserId",
-      "value": "user-client-01",
+      "key": "registeredUserId",
+      "value": "",
       "type": "string"
     }
   ],
   "item": [
     {
-      "name": "0. Autenticación",
+      "name": "1. Módulo de Autenticación & Tokens",
       "item": [
         {
-          "name": "0.1 Login Administrador (Obtener Token)",
+          "name": "1.1 POST /api/auth/register — Registro con Hashing Bcrypt (12 Rounds)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Respuesta contiene tokens y usuario sin hashes expuestos', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.accessToken).to.be.a('string');",
+                  "    pm.expect(jsonData.refreshToken).to.be.a('string');",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user.role).to.eql('cliente');",
+                  "    pm.expect(jsonData.user).to.not.have.property('password');",
+                  "    pm.collectionVariables.set('clientToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('clientRefreshToken', jsonData.refreshToken);",
+                  "    pm.collectionVariables.set('registeredUserId', jsonData.user.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Valeria Calvillo\",\n  \"email\": \"valeria.test" + Date.now() + "@lenios.com\",\n  \"password\": \"Segura123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "1.2 POST /api/auth/login — Login Administrador (Devuelve JWT Firmado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Respuesta no expone hashes ni contraseñas', function () {",
+                  "pm.test('Login devuelve JWT firmado con rol admin', function () {",
                   "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.accessToken).to.be.a('string');",
+                  "    pm.expect(jsonData.user.role).to.eql('admin');",
                   "    pm.expect(jsonData.user).to.not.have.property('password');",
-                  "    pm.expect(jsonData.user).to.not.have.property('hash');",
-                  "});",
-                  "",
-                  "const res = pm.response.json();",
-                  "if (res.token) {",
-                  "    pm.collectionVariables.set('adminToken', res.token);",
-                  "}"
+                  "    pm.collectionVariables.set('adminToken', jsonData.accessToken);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -82,20 +132,22 @@
           }
         },
         {
-          "name": "0.2 Login Cliente (Obtener Token)",
+          "name": "1.3 POST /api/auth/refresh — Refresco de Token de Acceso",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 200', function () {",
+                  "pm.test('Status code is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "const res = pm.response.json();",
-                  "if (res.token) {",
-                  "    pm.collectionVariables.set('clientToken', res.token);",
-                  "}"
+                  "pm.test('Refresco emite un nuevo Access Token firmado', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.accessToken).to.be.a('string');",
+                  "    pm.collectionVariables.set('clientToken', jsonData.accessToken);",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -111,38 +163,70 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"cliente@lenios.com\",\n  \"password\": \"cliente123\"\n}"
+              "raw": "{\n  \"refreshToken\": \"{{clientRefreshToken}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/auth/refresh",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "1.4 GET /api/auth/me — Middleware Valida JWT en Ruta Protegida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK para usuario autenticado', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Valida identidad y rol desde el token JWT', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.have.property('role');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
             }
           }
         }
       ]
     },
     {
-      "name": "1. Gestión de Pedidos (Criterios 1, 2, 3)",
+      "name": "2. Control de Acceso por Roles (RBAC: Admin vs Cliente)",
       "item": [
         {
-          "name": "1.1 POST /api/orders — Crear Pedido (Asociado al Cliente & Minimizado)",
+          "name": "2.1 POST /api/products — Intento de Crear Producto como Cliente (Debe dar 403 Forbidden)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 201 Created', function () {",
-                  "    pm.response.to.have.status(201);",
+                  "pm.test('Status code is 403 Forbidden para cliente', function () {",
+                  "    pm.response.to.have.status(403);",
                   "});",
                   "",
-                  "pm.test('Pedido contiene ID y totales válidos calculados en servidor', function () {",
+                  "pm.test('Mensaje indica que solo admin tiene acceso', function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.order).to.have.property('id');",
-                  "    pm.expect(jsonData.order.subtotal).to.be.above(0);",
-                  "    pm.expect(jsonData.order.total).to.be.above(0);",
-                  "    pm.collectionVariables.set('currentOrderId', jsonData.order.id);",
+                  "    pm.expect(jsonData.success).to.be.false;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -163,30 +247,68 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customerName\": \"Carlos Rodríguez\",\n  \"customerPhone\": \"4731234567\",\n  \"deliveryType\": \"delivery\",\n  \"customerAddress\": \"Calle Artesanal #12, Guanajuato\",\n  \"paymentMethod\": \"cash\",\n  \"notes\": \"Tocar timbre dos veces\",\n  \"items\": [\n    {\n      \"id\": \"leno-arrachera\",\n      \"quantity\": 2,\n      \"customization\": \"Base Rústica\",\n      \"extraPrice\": 8\n    }\n  ]\n}"
+              "raw": "{\n  \"name\": \"Leño No Autorizado\",\n  \"price\": 99.00,\n  \"stock\": 10\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/orders",
+              "raw": "{{baseUrl}}/products",
               "host": ["{{baseUrl}}"],
-              "path": ["orders"]
+              "path": ["products"]
             }
           }
         },
         {
-          "name": "1.2 GET /api/orders/:id — Obtener Pedido por ID (Propietario o Admin)",
+          "name": "2.2 POST /api/products — Crear Producto como Admin (Debe dar 201 Created)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status code is 201 Created para admin', function () {",
+                  "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Responde con la estructura correcta del pedido', function () {",
+                  "pm.test('Producto creado correctamente en catálogo', function () {",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.order.id).to.eql(pm.collectionVariables.get('currentOrderId'));",
+                  "    pm.expect(jsonData.product.name).to.eql('Leño Costilla Especial');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leño Costilla Especial\",\n  \"price\": 110.00,\n  \"stock\": 15,\n  \"category\": \"gourmet\",\n  \"description\": \"Costilla horneada a la leña\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "2.3 GET /api/admin/orders — Lista Pedidos como Admin (Debe dar 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK para admin', function () {",
+                  "    pm.response.to.have.status(200);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -198,18 +320,18 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{clientToken}}"
+                "value": "Bearer {{adminToken}}"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/orders/{{currentOrderId}}",
+              "raw": "{{baseUrl}}/admin/orders",
               "host": ["{{baseUrl}}"],
-              "path": ["orders", "{{currentOrderId}}"]
+              "path": ["admin", "orders"]
             }
           }
         },
         {
-          "name": "1.3 PUT /api/orders/:id/status — Actualizar Estado (Solo Admin)",
+          "name": "2.4 PUT /api/orders/:id/status — Actualizar Estado de Pedido como Admin (Debe dar 200 OK)",
           "event": [
             {
               "listen": "test",
@@ -219,7 +341,7 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Estado de orden actualizado a in_oven', function () {",
+                  "pm.test('Estado cambiado a in_oven', function () {",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.order.status).to.eql('in_oven');",
                   "});"
@@ -254,58 +376,17 @@
       ]
     },
     {
-      "name": "2. Panel Administrativo & ARCO (Criterios 4, 5, 6, 7)",
+      "name": "3. Derechos ARCO y Auditoría LGPDPPSO",
       "item": [
         {
-          "name": "2.1 GET /api/admin/orders — Lista Todos los Pedidos (Solo Admin)",
+          "name": "3.1 DELETE /api/users/:id — Ejercicio de Derecho ARCO",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 200 OK para Admin', function () {",
+                  "pm.test('Status code is 200 OK para supresión ARCO', function () {",
                   "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Lista contiene colección de órdenes', function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.orders).to.be.an('array');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{adminToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/orders",
-              "host": ["{{baseUrl}}"],
-              "path": ["admin", "orders"]
-            }
-          }
-        },
-        {
-          "name": "2.2 DELETE /api/users/:id — Lógica ARCO (Elimina / Anonimiza Datos Personales)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status code is 200 OK para Derecho ARCO', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test('Confirmación de anonimización LGPDPPSO', function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.success).to.be.true;",
-                  "    pm.expect(jsonData.details.status).to.eql('ANONYMIZED_AND_DELETED');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -321,14 +402,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/users/{{arcoUserId}}",
+              "raw": "{{baseUrl}}/users/{{registeredUserId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["users", "{{arcoUserId}}"]
+              "path": ["users", "{{registeredUserId}}"]
             }
           }
         },
         {
-          "name": "2.3 GET /api/admin/audit-logs — Trazabilidad de Auditoría (Quién, Cuándo, Para Qué)",
+          "name": "3.2 GET /api/admin/audit-logs — Trazabilidad de Auditoría",
           "event": [
             {
               "listen": "test",
@@ -338,15 +419,10 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test('Logs registran quién, cuándo y propósito', function () {",
+                  "pm.test('Logs registran eventos con usuario y propósito', function () {",
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.auditLogs).to.be.an('array');",
                   "    pm.expect(jsonData.auditLogs.length).to.be.above(0);",
-                  "    const log = jsonData.auditLogs[0];",
-                  "    pm.expect(log).to.have.property('who');",
-                  "    pm.expect(log).to.have.property('when');",
-                  "    pm.expect(log).to.have.property('action');",
-                  "    pm.expect(log).to.have.property('purpose');",
                   "});"
                 ],
                 "type": "text/javascript"

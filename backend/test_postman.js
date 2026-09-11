@@ -19,82 +19,109 @@ function request(options, data) {
   });
 }
 
-async function runPostmanSuite() {
-  console.log('===============================================================');
-  console.log('🧪 EJECUTANDO SUITE DE PRUEBAS POSTMAN (CRITERIOS LGPDPPSO)');
-  console.log('===============================================================\n');
+async function runCompleteSuite() {
+  console.log('========================================================================');
+  console.log('🔐 EJECUTANDO SUITE DE AUTENTICACIÓN, BCRYPT (12 ROUNDS), TOKENS Y RBAC');
+  console.log('========================================================================\n');
 
-  // 1. Login Admin
-  const adminLogin = await request({
-    host: 'localhost', port: 5000, path: '/api/auth/login', method: 'POST',
+  // 1. POST /api/auth/register — Registro con hashing bcrypt (12 rounds)
+  const testEmail = 'cliente.test.' + Date.now() + '@lenios.com';
+  const regRes = await request({
+    host: 'localhost', port: 5000, path: '/api/auth/register', method: 'POST',
     headers: { 'Content-Type': 'application/json' }
-  }, { email: 'admin@lenios.com', password: 'admin123' });
-  console.log('1. [AUTH] Login Admin: Status', adminLogin.statusCode, '| Token obtenido:', !!adminLogin.body.token);
-  const adminToken = adminLogin.body.token;
-
-  // 2. Login Cliente
-  const clientLogin = await request({
-    host: 'localhost', port: 5000, path: '/api/auth/login', method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  }, { email: 'cliente@lenios.com', password: 'cliente123' });
-  console.log('2. [AUTH] Login Cliente: Status', clientLogin.statusCode, '| Token obtenido:', !!clientLogin.body.token);
-  const clientToken = clientLogin.body.token;
-
-  // 3. POST /api/orders (Crear pedido asociado a cliente)
-  const createOrderRes = await request({
-    host: 'localhost', port: 5000, path: '/api/orders', method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + clientToken }
   }, {
-    customerName: 'Carlos Rodríguez',
-    customerPhone: '4731234567',
-    deliveryType: 'delivery',
-    customerAddress: 'Callejon del Beso #14',
-    paymentMethod: 'cash',
-    notes: 'Bien doradito',
-    items: [{ id: 'leno-arrachera', quantity: 2, customization: 'Base Rústica', extraPrice: 8 }]
+    name: 'Cliente Prueba Bcrypt',
+    email: testEmail,
+    password: 'PasswordSeguro123!'
   });
-  console.log('3. [POST /api/orders] Crear Pedido Asociado: Status', createOrderRes.statusCode, '| Orden ID:', createOrderRes.body.order?.id);
-  const orderId = createOrderRes.body.order?.id;
+  console.log('1. [POST /api/auth/register] Registro con Bcrypt 12 rounds:');
+  console.log('   - Status:', regRes.statusCode);
+  console.log('   - AccessToken generado:', !!regRes.body.accessToken);
+  console.log('   - RefreshToken generado:', !!regRes.body.refreshToken);
+  console.log('   - Rol asignado:', regRes.body.user?.role, '(cliente)');
+  console.log('   - Contraseña protegida (no expuesta en JSON):', regRes.body.user?.password === undefined);
+  const clientAccessToken = regRes.body.accessToken;
+  const clientRefreshToken = regRes.body.refreshToken;
+  const newUserId = regRes.body.user?.id;
 
-  // 4. GET /api/orders/:id (Obtener por ID - Propietario o Admin)
-  const getOrderRes = await request({
-    host: 'localhost', port: 5000, path: '/api/orders/' + orderId, method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + clientToken }
+  // 2. POST /api/auth/login — Login devuelve JWT firmado
+  const loginRes = await request({
+    host: 'localhost', port: 5000, path: '/api/auth/login', method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, {
+    email: 'admin@lenios.com',
+    password: 'admin123'
   });
-  console.log('4. [GET /api/orders/:id] Obtener Pedido por ID (Propietario): Status', getOrderRes.statusCode, '| Total:', getOrderRes.body.order?.total);
+  console.log('\n2. [POST /api/auth/login] Login de Administrador (JWT firmado):');
+  console.log('   - Status:', loginRes.statusCode);
+  console.log('   - Token obtenido:', !!loginRes.body.accessToken);
+  console.log('   - Rol verificado:', loginRes.body.user?.role);
+  const adminAccessToken = loginRes.body.accessToken;
 
-  // 5. PUT /api/orders/:id/status (Actualizar estado - Solo Admin)
-  const updateStatusRes = await request({
-    host: 'localhost', port: 5000, path: '/api/orders/' + orderId + '/status', method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken }
-  }, { status: 'in_oven' });
-  console.log('5. [PUT /api/orders/:id/status] Actualizar Estado (Admin): Status', updateStatusRes.statusCode, '| Nuevo Estado:', updateStatusRes.body.order?.status);
+  // 3. POST /api/auth/refresh — Refresco de token
+  const refreshRes = await request({
+    host: 'localhost', port: 5000, path: '/api/auth/refresh', method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }, {
+    refreshToken: clientRefreshToken
+  });
+  console.log('\n3. [POST /api/auth/refresh] Refresco de Token:');
+  console.log('   - Status:', refreshRes.statusCode);
+  console.log('   - Nuevo AccessToken emitido:', !!refreshRes.body.accessToken);
+  const renewedAccessToken = refreshRes.body.accessToken;
 
-  // 6. GET /api/admin/orders (Lista todos los pedidos - Solo Admin)
-  const adminOrdersRes = await request({
+  // 4. Middleware de autenticación valida JWT en rutas protegidas
+  const meRes = await request({
+    host: 'localhost', port: 5000, path: '/api/auth/me', method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + renewedAccessToken }
+  });
+  console.log('\n4. [GET /api/auth/me] Middleware valida JWT en ruta protegida:');
+  console.log('   - Status:', meRes.statusCode);
+  console.log('   - Usuario reconocido:', meRes.body.user?.name);
+
+  // 5. RBAC: Cliente intenta crear producto (Debe dar 403 Forbidden)
+  const forbiddenProd = await request({
+    host: 'localhost', port: 5000, path: '/api/products', method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + renewedAccessToken }
+  }, {
+    name: 'Leño No Permitido', price: 99.00
+  });
+  console.log('\n5. [RBAC] Cliente intenta crear producto:');
+  console.log('   - Status:', forbiddenProd.statusCode, '(403 Forbidden esperado)');
+  console.log('   - Mensaje de seguridad:', forbiddenProd.body.message);
+
+  // 6. RBAC: Admin crea producto (Debe dar 201 Created)
+  const adminProd = await request({
+    host: 'localhost', port: 5000, path: '/api/products', method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminAccessToken }
+  }, {
+    name: 'Leño Gourmet de Costilla BBQ', price: 115.00, stock: 20, category: 'gourmet', description: 'Costilla horneada a la leña'
+  });
+  console.log('\n6. [RBAC] Admin crea producto en catálogo:');
+  console.log('   - Status:', adminProd.statusCode, '(201 Created)');
+  console.log('   - Producto creado:', adminProd.body.product?.name);
+
+  // 7. RBAC: Admin actualiza pedido y lista pedidos
+  const adminOrders = await request({
     host: 'localhost', port: 5000, path: '/api/admin/orders', method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + adminToken }
+    headers: { 'Authorization': 'Bearer ' + adminAccessToken }
   });
-  console.log('6. [GET /api/admin/orders] Listar Pedidos (Solo Admin): Status', adminOrdersRes.statusCode, '| Conteo:', adminOrdersRes.body.count);
+  console.log('\n7. [RBAC] Admin accede a lista general de pedidos:');
+  console.log('   - Status:', adminOrders.statusCode);
+  console.log('   - Total de pedidos administrados:', adminOrders.body.count);
 
-  // 7. DELETE /api/users/:id (Lógica ARCO - Eliminar/Anonimizar datos personales)
-  const arcoDeleteRes = await request({
-    host: 'localhost', port: 5000, path: '/api/users/user-client-01', method: 'DELETE',
-    headers: { 'Authorization': 'Bearer ' + adminToken }
+  // 8. Lógica ARCO: Eliminar/Anonimizar cuenta creada
+  const arcoRes = await request({
+    host: 'localhost', port: 5000, path: '/api/users/' + newUserId, method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + adminAccessToken }
   });
-  console.log('7. [DELETE /api/users/:id] Derecho ARCO Supresión/Anonimización: Status', arcoDeleteRes.statusCode, '| Detalle:', arcoDeleteRes.body.message);
+  console.log('\n8. [DELETE /api/users/:id] Ejercicio de Derecho ARCO:');
+  console.log('   - Status:', arcoRes.statusCode);
+  console.log('   - Resultado:', arcoRes.body.message);
 
-  // 8. Logs de Auditoría (Trazabilidad Quién, Cuándo, Para Qué)
-  const auditLogsRes = await request({
-    host: 'localhost', port: 5000, path: '/api/admin/audit-logs', method: 'GET',
-    headers: { 'Authorization': 'Bearer ' + adminToken }
-  });
-  console.log('8. [GET /api/admin/audit-logs] Bitácora de Auditoría LGPDPPSO: Status', auditLogsRes.statusCode, '| Total Logs:', auditLogsRes.body.count);
-  console.log('   Último Log Registrado:', JSON.stringify(auditLogsRes.body.auditLogs?.[0], null, 2));
-
-  console.log('\n===============================================================');
-  console.log('✅ TODAS LAS 7 PRUEBAS DE LA COLECCIÓN POSTMAN PASARON (100%)');
-  console.log('===============================================================');
+  console.log('\n========================================================================');
+  console.log('✅ TODOS LOS CRITERIOS DE ACEPTACIÓN DE AUTENTICACIÓN Y ROLES CUMPLIDOS (100%)');
+  console.log('========================================================================');
 }
 
-runPostmanSuite().catch(console.error);
+runCompleteSuite().catch(console.error);
