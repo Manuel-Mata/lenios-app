@@ -6,9 +6,9 @@ services:
     container_name: lenios_postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: lenios_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-lenios_db}
     ports:
       - "5432:5432"
     volumes:
@@ -23,9 +23,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      PORT: 3000
-      DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/lenios_db?schema=public"
-      JWT_SECRET: "lenios_super_secret_jwt_key_2026"
+      PORT: ${PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgrespassword@postgres:5432/lenios_db?schema=public}
+      JWT_SECRET: ${JWT_SECRET:-lenios_super_secret_jwt_key_2026}
     depends_on:
       - postgres
 
