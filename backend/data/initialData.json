@@ -447,9 +447,241 @@
       "email": "admin@lenios.com",
       "password": "admin123",
       "role": "admin"
+    },
+    {
+      "id": "user-1789104723326",
+      "name": "Cliente Valeria",
+      "email": "cliente_1789104723316@lenios.com",
+      "password": "$2b$12$0f9bd2b62bd454547c3c163682928448$c039bbaff60c5ca40fc05a1ad4f0e180e4efd27733a693e2bc9d330a72c4ad4068e13f1d4cb2b3399ddf8e3e499ad969822c3e997e2287e60d0c989b95a7489b",
+      "role": "cliente",
+      "createdAt": "2026-09-11T05:32:03.326Z"
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1789104723381-72",
+      "timestamp": "2026-09-11T05:32:03.381Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.381Z",
+      "action": "DELETE_PRODUCT",
+      "purpose": "Eliminación de producto leno-1789104723358 del catálogo",
+      "resource": "Product: leno-1789104723358"
+    },
+    {
+      "id": "audit-1789104723376-546",
+      "timestamp": "2026-09-11T05:32:03.376Z",
+      "who": {
+        "userId": "user-1789104723326",
+        "userName": "Cliente Valeria",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.376Z",
+      "action": "UNAUTHORIZED_DELETE_PRODUCT",
+      "purpose": "Intento no autorizado de eliminar producto leno-1789104723358",
+      "resource": "Product: leno-1789104723358"
+    },
+    {
+      "id": "audit-1789104723371-897",
+      "timestamp": "2026-09-11T05:32:03.371Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.371Z",
+      "action": "UPDATE_PRODUCT",
+      "purpose": "Actualización de datos del producto: Leño Gourmet Pastor Suizo Premium",
+      "resource": "Product: leno-1789104723358"
+    },
+    {
+      "id": "audit-1789104723364-598",
+      "timestamp": "2026-09-11T05:32:03.364Z",
+      "who": {
+        "userId": "user-1789104723326",
+        "userName": "Cliente Valeria",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.364Z",
+      "action": "UNAUTHORIZED_UPDATE_PRODUCT",
+      "purpose": "Intento no autorizado de editar producto leno-1789104723358",
+      "resource": "Product: leno-1789104723358"
+    },
+    {
+      "id": "audit-1789104723360-704",
+      "timestamp": "2026-09-11T05:32:03.360Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.360Z",
+      "action": "CREATE_PRODUCT",
+      "purpose": "Creación de nuevo producto: Leño Gourmet de Pastor Suizo",
+      "resource": "Product: leno-1789104723358"
+    },
+    {
+      "id": "audit-1789104723348-525",
+      "timestamp": "2026-09-11T05:32:03.348Z",
+      "who": {
+        "userId": "user-1789104723326",
+        "userName": "Cliente Valeria",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.348Z",
+      "action": "UNAUTHORIZED_CREATE_PRODUCT",
+      "purpose": "Intento no autorizado de agregar producto",
+      "resource": "POST /api/products"
+    },
+    {
+      "id": "audit-1789104723328-930",
+      "timestamp": "2026-09-11T05:32:03.328Z",
+      "who": {
+        "userId": "user-1789104723326",
+        "userName": "Cliente Valeria",
+        "role": "cliente",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.328Z",
+      "action": "USER_REGISTER",
+      "purpose": "Registro de nuevo usuario con rol cliente",
+      "resource": "User: user-1789104723326"
+    },
+    {
+      "id": "audit-1789104723309-212",
+      "timestamp": "2026-09-11T05:32:03.309Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:32:03.310Z",
+      "action": "LOGIN_SUCCESS",
+      "purpose": "Inicio de sesión exitoso con JWT firmado",
+      "resource": "User: user-admin-01"
+    },
+    {
+      "id": "audit-1789104707965-597",
+      "timestamp": "2026-09-11T05:31:47.965Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.965Z",
+      "action": "DELETE_PRODUCT",
+      "purpose": "Eliminación de producto leno-1789104707947 del catálogo",
+      "resource": "Product: leno-1789104707947"
+    },
+    {
+      "id": "audit-1789104707960-263",
+      "timestamp": "2026-09-11T05:31:47.960Z",
+      "who": {
+        "userId": "anonymous",
+        "userName": "Invitado",
+        "role": "guest",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.960Z",
+      "action": "UNAUTHORIZED_DELETE_PRODUCT",
+      "purpose": "Intento no autorizado de eliminar producto leno-1789104707947",
+      "resource": "Product: leno-1789104707947"
+    },
+    {
+      "id": "audit-1789104707958-746",
+      "timestamp": "2026-09-11T05:31:47.958Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.958Z",
+      "action": "UPDATE_PRODUCT",
+      "purpose": "Actualización de datos del producto: Leño Gourmet Pastor Suizo Premium",
+      "resource": "Product: leno-1789104707947"
+    },
+    {
+      "id": "audit-1789104707951-137",
+      "timestamp": "2026-09-11T05:31:47.951Z",
+      "who": {
+        "userId": "anonymous",
+        "userName": "Invitado",
+        "role": "guest",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.951Z",
+      "action": "UNAUTHORIZED_UPDATE_PRODUCT",
+      "purpose": "Intento no autorizado de editar producto leno-1789104707947",
+      "resource": "Product: leno-1789104707947"
+    },
+    {
+      "id": "audit-1789104707949-211",
+      "timestamp": "2026-09-11T05:31:47.949Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.949Z",
+      "action": "CREATE_PRODUCT",
+      "purpose": "Creación de nuevo producto: Leño Gourmet de Pastor Suizo",
+      "resource": "Product: leno-1789104707947"
+    },
+    {
+      "id": "audit-1789104707941-511",
+      "timestamp": "2026-09-11T05:31:47.941Z",
+      "who": {
+        "userId": "anonymous",
+        "userName": "Invitado",
+        "role": "guest",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.941Z",
+      "action": "UNAUTHORIZED_CREATE_PRODUCT",
+      "purpose": "Intento no autorizado de agregar producto",
+      "resource": "POST /api/products"
+    },
+    {
+      "id": "audit-1789104707922-721",
+      "timestamp": "2026-09-11T05:31:47.922Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:31:47.922Z",
+      "action": "LOGIN_SUCCESS",
+      "purpose": "Inicio de sesión exitoso con JWT firmado",
+      "resource": "User: user-admin-01"
+    },
+    {
+      "id": "audit-1789104657520-846",
+      "timestamp": "2026-09-11T05:30:57.520Z",
+      "who": {
+        "userId": "user-admin-01",
+        "userName": "Administrador Leños",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "when": "2026-09-11T05:30:57.521Z",
+      "action": "LOGIN_SUCCESS",
+      "purpose": "Inicio de sesión exitoso con JWT firmado",
+      "resource": "User: user-admin-01"
+    },
     {
       "id": "audit-1789103625049-907",
       "timestamp": "2026-09-11T05:13:45.049Z",

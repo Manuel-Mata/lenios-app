@@ -286,23 +286,29 @@ const server = http.createServer(async (req, res) => {
       const name = String(body.name || '').trim();
       const email = String(body.email || '').toLowerCase().trim();
       const password = String(body.password || '').trim();
-      const role = (body.role === 'admin' ? 'admin' : 'cliente'); // Roles definidos: admin y cliente
+      const role = (body.role === 'admin' ? 'admin' : 'cliente');
 
-      if (!name || !email || !password) {
+      if (!name || name.length < 2) {
         return sendJson(res, 400, {
           success: false,
-          message: 'Nombre, correo electrónico y contraseña son obligatorios.'
+          message: 'El nombre es obligatorio y debe tener al menos 2 caracteres.'
         }, req);
       }
 
-      if (password.length < 6) {
+      if (!email || !email.includes('@')) {
+        return sendJson(res, 400, {
+          success: false,
+          message: 'Correo electrónico válido es obligatorio.'
+        }, req);
+      }
+
+      if (!password || password.length < 6) {
         return sendJson(res, 400, {
           success: false,
           message: 'La contraseña debe contener al menos 6 caracteres.'
         }, req);
       }
 
-      // Validar si el correo ya está registrado
       const existingUser = db.users.find(u => u.email.toLowerCase() === email);
       if (existingUser) {
         return sendJson(res, 409, {
@@ -311,7 +317,6 @@ const server = http.createServer(async (req, res) => {
         }, req);
       }
 
-      // Hashing de contraseña con Bcrypt usando mínimo 12 rounds
       const hashedPassword = await hash(password, SALT_ROUNDS);
 
       const newUser = {
@@ -326,7 +331,6 @@ const server = http.createServer(async (req, res) => {
       db.users.push(newUser);
       saveDb();
 
-      // Generar Access Token y Refresh Token
       const userPayload = {
         id: newUser.id,
         name: newUser.name,
@@ -381,7 +385,6 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' }, req);
       }
 
-      // Verificación de hash Bcrypt
       const isValidPassword = await compare(password, user.password);
       if (!isValidPassword) {
         return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' }, req);
@@ -455,7 +458,6 @@ const server = http.createServer(async (req, res) => {
         }, req);
       }
 
-      // Generar nuevo Access Token firmado
       const newAccessPayload = {
         id: user.id,
         name: user.name,
@@ -564,32 +566,67 @@ const server = http.createServer(async (req, res) => {
     }
 
     // =========================================================================
-    // 2. PRODUCTOS (CATÁLOGO PÚBLICO & GESTIÓN SOLO ADMIN)
+    // 2. CATEGORÍAS: GET /api/categories
     // =========================================================================
+    if (pathname === '/api/categories' && method === 'GET') {
+      const categories = db.categories || [];
+      return sendJson(res, 200, {
+        success: true,
+        count: categories.length,
+        categories
+      }, req);
+    }
+
+    // =========================================================================
+    // 3. PRODUCTOS (LISTA CON PAGINACIÓN, FILTRO POR CATEGORÍA, DETALLE, CREAR, ACTUALIZAR, ELIMINAR)
+    // =========================================================================
+
+    // 3.1 GET /api/products — Lista productos con paginación y filtro por categoría
+    // 3.2 POST /api/products — Crea producto (Solo rol Admin con validación estricta)
     if (pathname === '/api/products') {
-      // Lectura del catálogo es pública
       if (method === 'GET') {
         const category = parsedUrl.searchParams.get('category');
         const featured = parsedUrl.searchParams.get('featured');
+        const pageParam = parseInt(parsedUrl.searchParams.get('page'));
+        const limitParam = parseInt(parsedUrl.searchParams.get('limit'));
+
         let filtered = [...db.products];
 
+        // Filtro por categoría: GET /api/products?category=:id
         if (category && category !== 'all') {
           filtered = filtered.filter(p => p.category === category);
         }
+
         if (featured === 'true') {
           filtered = filtered.filter(p => p.isFeatured);
         }
 
+        const total = filtered.length;
+        let paginatedProducts = filtered;
+        let page = 1;
+        let totalPages = 1;
+
+        // Paginación si se especifica limit o page
+        if (!isNaN(limitParam) && limitParam > 0) {
+          page = !isNaN(pageParam) && pageParam > 0 ? pageParam : 1;
+          totalPages = Math.ceil(total / limitParam) || 1;
+          const offset = (page - 1) * limitParam;
+          paginatedProducts = filtered.slice(offset, offset + limitParam);
+        }
+
         return sendJson(res, 200, {
           success: true,
-          count: filtered.length,
-          products: filtered,
+          count: paginatedProducts.length,
+          total,
+          page,
+          totalPages,
+          products: paginatedProducts,
           categories: db.categories,
           customizerOptions: db.customizerOptions
         }, req);
       }
 
-      // Creación de productos: SOLO ROL ADMIN
+      // POST /api/products — Crea producto (Solo rol Admin con validación estricta)
       if (method === 'POST') {
         if (!authUser || authUser.role !== 'admin') {
           logAudit(req, authUser, 'UNAUTHORIZED_CREATE_PRODUCT', 'Intento no autorizado de agregar producto', 'POST /api/products');
@@ -600,31 +637,178 @@ const server = http.createServer(async (req, res) => {
         }
 
         const body = await parseBody(req);
-        if (!body.name || body.price === undefined) {
-          return sendJson(res, 400, { success: false, message: 'Nombre y precio son requeridos' }, req);
+        const name = String(body.name || '').trim();
+        const price = parseFloat(body.price);
+        const stock = parseInt(body.stock);
+        const category = String(body.category || 'clasicos').trim();
+        const description = String(body.description || '').trim();
+        const image = String(body.image || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80').trim();
+        const badge = String(body.badge || '⭐ Nuevo').trim();
+        const isFeatured = Boolean(body.isFeatured);
+
+        // Validación estricta de datos de entrada
+        if (!name || name.length < 3) {
+          return sendJson(res, 400, {
+            success: false,
+            message: 'Validación fallida: El nombre del producto es requerido y debe tener al menos 3 caracteres.'
+          }, req);
         }
+
+        if (isNaN(price) || price <= 0) {
+          return sendJson(res, 400, {
+            success: false,
+            message: 'Validación fallida: El precio debe ser un número positivo mayor a 0.'
+          }, req);
+        }
+
+        if (body.stock !== undefined && (isNaN(stock) || stock < 0)) {
+          return sendJson(res, 400, {
+            success: false,
+            message: 'Validación fallida: El stock debe ser un número entero mayor o igual a 0.'
+          }, req);
+        }
+
+        const validStock = isNaN(stock) ? 0 : stock;
         const newProduct = {
           id: 'leno-' + Date.now(),
-          name: body.name,
-          category: body.category || 'clasicos',
-          price: parseFloat(body.price),
-          stock: parseInt(body.stock) || 0,
-          available: (parseInt(body.stock) || 0) > 0,
-          isFeatured: Boolean(body.isFeatured),
-          badge: body.badge || '⭐ Nuevo',
-          description: body.description || '',
-          image: body.image || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
+          name,
+          category,
+          price: parseFloat(price.toFixed(2)),
+          stock: validStock,
+          available: validStock > 0,
+          isFeatured,
+          badge,
+          description,
+          image
         };
+
         db.products.unshift(newProduct);
         saveDb();
 
         logAudit(req, authUser, 'CREATE_PRODUCT', `Creación de nuevo producto: ${newProduct.name}`, `Product: ${newProduct.id}`);
 
-        return sendJson(res, 201, { success: true, product: newProduct }, req);
+        return sendJson(res, 201, {
+          success: true,
+          message: 'Producto creado exitosamente en el catálogo',
+          product: newProduct
+        }, req);
       }
     }
 
-    // Toggle disponibilidad de producto: SOLO ROL ADMIN
+    // 3.3 GET /api/products/:id — Obtiene un producto por ID
+    // 3.4 PUT /api/products/:id — Actualiza producto (Solo rol Admin con validación estricta)
+    // 3.5 DELETE /api/products/:id — Elimina producto (Solo rol Admin)
+    const productDetailMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
+    if (productDetailMatch) {
+      const prodId = productDetailMatch[1];
+
+      // GET /api/products/:id — Obtiene un producto por ID
+      if (method === 'GET') {
+        const prod = db.products.find(p => p.id === prodId);
+        if (!prod) {
+          return sendJson(res, 404, {
+            success: false,
+            message: `Producto con ID '${prodId}' no encontrado en el catálogo.`
+          }, req);
+        }
+
+        return sendJson(res, 200, {
+          success: true,
+          product: prod
+        }, req);
+      }
+
+      // PUT /api/products/:id — Actualiza producto (Solo rol Admin con validación estricta)
+      if (method === 'PUT' || method === 'PATCH') {
+        if (!authUser || authUser.role !== 'admin') {
+          logAudit(req, authUser, 'UNAUTHORIZED_UPDATE_PRODUCT', `Intento no autorizado de editar producto ${prodId}`, `Product: ${prodId}`);
+          return sendJson(res, 403, {
+            success: false,
+            message: 'Acceso denegado. Solo administradores pueden actualizar productos del catálogo.'
+          }, req);
+        }
+
+        const prod = db.products.find(p => p.id === prodId);
+        if (!prod) {
+          return sendJson(res, 404, {
+            success: false,
+            message: `Producto con ID '${prodId}' no encontrado para actualizar.`
+          }, req);
+        }
+
+        const body = await parseBody(req);
+
+        // Validación estricta si se proveen los campos
+        if (body.name !== undefined) {
+          const name = String(body.name).trim();
+          if (name.length < 3) {
+            return sendJson(res, 400, { success: false, message: 'Validación fallida: El nombre debe tener al menos 3 caracteres.' }, req);
+          }
+          prod.name = name;
+        }
+
+        if (body.price !== undefined) {
+          const price = parseFloat(body.price);
+          if (isNaN(price) || price <= 0) {
+            return sendJson(res, 400, { success: false, message: 'Validación fallida: El precio debe ser un número mayor a 0.' }, req);
+          }
+          prod.price = parseFloat(price.toFixed(2));
+        }
+
+        if (body.stock !== undefined) {
+          const stock = parseInt(body.stock);
+          if (isNaN(stock) || stock < 0) {
+            return sendJson(res, 400, { success: false, message: 'Validación fallida: El stock debe ser un entero >= 0.' }, req);
+          }
+          prod.stock = stock;
+          prod.available = stock > 0;
+        }
+
+        if (body.category !== undefined) prod.category = String(body.category).trim();
+        if (body.description !== undefined) prod.description = String(body.description).trim();
+        if (body.image !== undefined) prod.image = String(body.image).trim();
+        if (body.badge !== undefined) prod.badge = String(body.badge).trim();
+        if (body.isFeatured !== undefined) prod.isFeatured = Boolean(body.isFeatured);
+        if (body.available !== undefined) prod.available = Boolean(body.available);
+
+        saveDb();
+        logAudit(req, authUser, 'UPDATE_PRODUCT', `Actualización de datos del producto: ${prod.name}`, `Product: ${prodId}`);
+
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Producto actualizado exitosamente',
+          product: prod
+        }, req);
+      }
+
+      // DELETE /api/products/:id — Elimina producto (Solo rol Admin)
+      if (method === 'DELETE') {
+        if (!authUser || authUser.role !== 'admin') {
+          logAudit(req, authUser, 'UNAUTHORIZED_DELETE_PRODUCT', `Intento no autorizado de eliminar producto ${prodId}`, `Product: ${prodId}`);
+          return sendJson(res, 403, {
+            success: false,
+            message: 'Acceso denegado. Solo administradores pueden eliminar productos del catálogo.'
+          }, req);
+        }
+
+        const initialLength = db.products.length;
+        db.products = db.products.filter(p => p.id !== prodId);
+
+        if (db.products.length === initialLength) {
+          return sendJson(res, 404, { success: false, message: 'Producto no encontrado' }, req);
+        }
+
+        saveDb();
+        logAudit(req, authUser, 'DELETE_PRODUCT', `Eliminación de producto ${prodId} del catálogo`, `Product: ${prodId}`);
+
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Producto eliminado correctamente del catálogo'
+        }, req);
+      }
+    }
+
+    // Toggle disponibilidad de producto (Atajo PATCH /api/products/:id/toggle - Solo Admin)
     const toggleMatch = pathname.match(/^\/api\/products\/([^\/]+)\/toggle$/);
     if (toggleMatch && method === 'PATCH') {
       if (!authUser || authUser.role !== 'admin') {
@@ -645,30 +829,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, product: prod, available: prod.available }, req);
     }
 
-    // Eliminar producto: SOLO ROL ADMIN
-    const deleteMatch = pathname.match(/^\/api\/products\/([^\/]+)$/);
-    if (deleteMatch && method === 'DELETE') {
-      if (!authUser || authUser.role !== 'admin') {
-        return sendJson(res, 403, {
-          success: false,
-          message: 'Acceso denegado. Solo administradores pueden eliminar productos.'
-        }, req);
-      }
-
-      const prodId = deleteMatch[1];
-      db.products = db.products.filter(p => p.id !== prodId);
-      saveDb();
-
-      logAudit(req, authUser, 'DELETE_PRODUCT', 'Eliminación de producto del catálogo', `Product: ${prodId}`);
-
-      return sendJson(res, 200, { success: true, message: 'Producto eliminado correctamente' }, req);
-    }
-
     // =========================================================================
-    // 3. GESTIÓN DE PEDIDOS Y PANEL DE ADMINISTRACIÓN
+    // 4. GESTIÓN DE PEDIDOS Y PANEL DE ADMINISTRACIÓN
     // =========================================================================
 
-    // 3.1 GET /api/admin/orders — Lista todos los pedidos (SOLO ROL ADMIN)
+    // 4.1 GET /api/admin/orders — Lista todos los pedidos (SOLO ROL ADMIN)
     if (pathname === '/api/admin/orders' && method === 'GET') {
       if (!authUser || authUser.role !== 'admin') {
         logAudit(req, authUser, 'UNAUTHORIZED_ACCESS_ATTEMPT', 'Intento no autorizado de consultar lista general de pedidos', 'GET /api/admin/orders');
@@ -687,7 +852,7 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 3.2 GET /api/admin/audit-logs — Bitácora de auditoría LGPDPPSO (SOLO ROL ADMIN)
+    // 4.2 GET /api/admin/audit-logs — Bitácora de auditoría LGPDPPSO (SOLO ROL ADMIN)
     if (pathname === '/api/admin/audit-logs' && method === 'GET') {
       if (!authUser || authUser.role !== 'admin') {
         return sendJson(res, 403, {
@@ -705,7 +870,7 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 3.3 POST /api/orders — Crear nuevo pedido asociado al cliente con Minimización
+    // 4.3 POST /api/orders — Crear nuevo pedido asociado al cliente con Minimización
     if (pathname === '/api/orders') {
       if (method === 'GET') {
         if (authUser && authUser.role === 'admin') {
@@ -723,8 +888,17 @@ const server = http.createServer(async (req, res) => {
         const body = await parseBody(req);
         const { customerName, customerPhone, customerAddress, deliveryType, paymentMethod, items, notes } = body;
 
-        if (!customerName || !customerPhone || !items || !Array.isArray(items) || items.length === 0) {
-          return sendJson(res, 400, { success: false, message: 'Datos incompletos del pedido' }, req);
+        // Validación estricta de datos de entrada en pedidos
+        if (!customerName || String(customerName).trim().length < 2) {
+          return sendJson(res, 400, { success: false, message: 'Validación fallida: El nombre del cliente es requerido.' }, req);
+        }
+
+        if (!customerPhone || String(customerPhone).trim().length < 7) {
+          return sendJson(res, 400, { success: false, message: 'Validación fallida: Teléfono de contacto válido es requerido.' }, req);
+        }
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+          return sendJson(res, 400, { success: false, message: 'Validación fallida: La orden debe incluir al menos un producto.' }, req);
         }
 
         let subtotal = 0;
@@ -824,7 +998,7 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // 3.4 Actualizar estado del pedido: PUT /api/orders/:id/status o PATCH (SOLO ROL ADMIN)
+    // 4.4 Actualizar estado del pedido: PUT /api/orders/:id/status (SOLO ROL ADMIN)
     const orderStatusMatch = pathname.match(/^\/api\/orders\/([^\/]+)\/status$/);
     if (orderStatusMatch && (method === 'PUT' || method === 'PATCH')) {
       const orderId = orderStatusMatch[1];
@@ -863,7 +1037,7 @@ const server = http.createServer(async (req, res) => {
       }, req);
     }
 
-    // 3.5 Obtener pedido por ID: GET /api/orders/:id (Solo propietario o Admin)
+    // 4.5 Obtener pedido por ID: GET /api/orders/:id (Solo propietario o Admin)
     const getOrderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
     if (getOrderMatch && method === 'GET') {
       const orderId = getOrderMatch[1];
@@ -891,7 +1065,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, order }, req);
     }
 
-    // 3.6 Eliminar pedido: DELETE /api/orders/:id (SOLO ROL ADMIN)
+    // 4.6 Eliminar pedido: DELETE /api/orders/:id (SOLO ROL ADMIN)
     const deleteOrderMatch = pathname.match(/^\/api\/orders\/([^\/]+)$/);
     if (deleteOrderMatch && method === 'DELETE') {
       if (!authUser || authUser.role !== 'admin') {
@@ -911,7 +1085,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // =========================================================================
-    // 4. DERECHOS ARCO: DELETE /api/users/:id
+    // 5. DERECHOS ARCO: DELETE /api/users/:id
     // =========================================================================
     const deleteUserMatch = pathname.match(/^\/api\/users\/([^\/]+)$/);
     if (deleteUserMatch && method === 'DELETE') {
@@ -963,7 +1137,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // =========================================================================
-    // 5. BUSINESS INFO & STATUS
+    // 6. BUSINESS INFO & STATUS
     // =========================================================================
     if (pathname === '/api/business/info') {
       const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635').replace(/\D/g, '');
@@ -992,8 +1166,7 @@ server.listen(PORT, () => {
   console.log(`🔥 LEÑOS RELLENOS - Servidor Activo en:`);
   console.log(`🌐 Aplicación Web: http://localhost:${PORT}`);
   console.log(`📡 API REST:       http://localhost:${PORT}/api`);
-  console.log(`🔒 Auth & Tokens:  Bcrypt (12 rounds) + JWT (Access/Refresh)`);
-  console.log(`🛡️ Roles:          admin & cliente (RBAC estricto)`);
-  console.log(`📜 Auditoría:      Trazabilidad de Logs LGPDPPSO`);
+  console.log(`🍕 Catálogo:       Paginación, Categorías, Filtros, CRUD`);
+  console.log(`🔒 Seguridad:      JWT, Bcrypt 12 rounds, RBAC (admin/cliente)`);
   console.log('====================================================');
 });
