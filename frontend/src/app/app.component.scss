@@ -1,0 +1,131 @@
+.navbar {
+  background: #190e07;
+  border-bottom: 1px solid rgba(255, 115, 22, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.brand-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ff7316;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-links a {
+  color: #e4d5c7;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  background: rgba(255, 115, 22, 0.15);
+  color: #ff7316;
+}
+
+.admin-link {
+  border: 1px solid rgba(255, 115, 22, 0.4);
+  color: #ff7316 !important;
+}
+
+.cart-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.badge {
+  background: #ff7316;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+
+.auth-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+.user-greeting {
+  font-size: 0.85rem;
+  color: #ff7316;
+  font-weight: bold;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid #4a382c;
+  color: #a89485;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-login {
+  background: #ff7316;
+  color: #fff !important;
+  font-weight: bold;
+  padding: 0.5rem 1rem !important;
+  border-radius: 8px;
+}
+
+.btn-login:hover {
+  background: #ea580c !important;
+}
+
+.main-content {
+  min-height: calc(100vh - 140px);
+}
+
+.app-footer {
+  background: #120904;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: #a89485;
+  font-size: 0.85rem;
+}
+
+.privacy-note {
+  font-size: 0.75rem;
+  color: #736254;
+  margin-top: 4px;
+}

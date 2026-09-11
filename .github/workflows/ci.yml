@@ -1,0 +1,45 @@
+name: CI/CD Pipeline - Leños Rellenos R2
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend-lint-and-build:
+    name: Build & Audit BackEnd (Node.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: cd backend && npm ci
+
+      - name: Generate Prisma Client
+        run: cd backend && npx prisma generate
+
+      - name: Run Build (TypeScript)
+        run: cd backend && npm run build
+
+  frontend-lint-and-build:
+    name: Build & Audit FrontEnd (Angular 19)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: cd frontend && npm ci
+
+      - name: Build Angular PWA
+        run: cd frontend && npx ng build --configuration production
