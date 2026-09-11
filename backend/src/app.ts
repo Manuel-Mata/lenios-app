@@ -27,15 +27,17 @@ const allowedOrigins = [
   'http://127.0.0.1:4200',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5000',
+  'https://tu-frontend-en-render.onrender.com', // <--- ¡Pon aquí la URL real de tu frontend si ya está desplegado!
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Si no hay origin (como Postman o curl) o está en la lista / es local, lo dejamos pasar
       if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
         callback(null, true);
       } else {
-        callback(null, true);
+        callback(null, true); // Cambiado temporalmente a true para evitar bloqueos drásticos mientras pruebas
       }
     },
     credentials: true,
