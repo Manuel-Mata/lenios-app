@@ -25,7 +25,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const { email, password } = req.body;
     const result = await authService.login(email, password);
       // Set access token as HttpOnly cookie
-      res.cookie('accessToken', result.accessToken, {
+      res.cookie('accessToken', result.tokens.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
