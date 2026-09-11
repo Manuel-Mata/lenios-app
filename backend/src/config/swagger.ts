@@ -13,6 +13,10 @@ const options: swaggerJSDoc.Options = {
         url: 'http://localhost:3000',
         description: 'Servidor Local',
       },
+      {
+        url: 'https://lenos-rellenos-api.onrender.com',
+        description: 'Servidor Producción (Render)',
+      },
     ],
     components: {
       securitySchemes: {
