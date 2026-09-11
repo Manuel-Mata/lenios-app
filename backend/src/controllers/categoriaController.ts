@@ -32,9 +32,6 @@ export const getCategoriaById = async (req: Request, res: Response, next: NextFu
       success: false,
       message: error.message || 'Categoría no encontrada',
     });
-    res.status(200).json({ success: true, data: categoria });
-  } catch (error) {
-    next(error);
   }
 };
 
