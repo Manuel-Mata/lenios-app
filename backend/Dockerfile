@@ -15,6 +15,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Instalar OpenSSL necesario para Prisma en Alpine
+RUN apk add --no-cache openssl libc6-compat
+
 ENV NODE_ENV=production
 
 COPY package*.json ./
