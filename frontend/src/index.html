@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Leños Rellenos - Menú & Pedidos Artesanales</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- PWA Metadata & Theme -->
+  <meta name="theme-color" content="#ff7316">
+  <meta name="description" content="Aplicación Web PWA de comercio electrónico para Leños Rellenos comida artesanal.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="favicon.ico">
+
+  <!-- OWASP: Directiva CSP para prevenir Clickjacking e Inyección de Contenido -->
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self'; 
+                 img-src 'self' data: https:; 
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+                 font-src 'self' https://fonts.gstatic.com; 
+                 script-src 'self' 'unsafe-inline'; 
+                 connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://api.cloudinary.com; 
+                 frame-ancestors 'none';">
+
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

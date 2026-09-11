@@ -20,11 +20,27 @@ const app: Application = express();
 // --- MIDDLEWARES GLOBALES --- //
 app.use(helmet());
 
+const allowedOrigins = [
+  'http://localhost:4200',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:4200',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5000',
+];
+
 app.use(
   cors({
-    origin: '*',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   }),
 );
 
