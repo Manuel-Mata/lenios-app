@@ -8,6 +8,9 @@ const PORT = process.env.PORT || 5000;
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 const JWT_SECRET = process.env.JWT_SECRET || 'lenios_rellenos_super_secret_jwt_key_2026';
 
+// Almacén de sesiones en memoria
+const sessionStore = new Map();
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
   '.css': 'text/css; charset=UTF-8',
@@ -97,6 +100,35 @@ function parseCookies(req) {
   return list;
 }
 
+function getOrCreateSession(req, res) {
+  const cookies = parseCookies(req);
+  let sessionId = cookies.sessionId;
+  let session = sessionId ? sessionStore.get(sessionId) : null;
+  let isNew = false;
+
+  if (!session) {
+    sessionId = crypto.randomUUID();
+    session = {
+      id: sessionId,
+      cart: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    sessionStore.set(sessionId, session);
+    isNew = true;
+  } else {
+    session.updatedAt = new Date().toISOString();
+  }
+
+  // Establecer cookie con atributos Secure, HttpOnly y SameSite=Strict
+  if (isNew || !cookies.sessionId) {
+    const cookieHeader = `sessionId=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=86400`;
+    res.setHeader('Set-Cookie', cookieHeader);
+  }
+
+  return session;
+}
+
 function parseBody(req) {
   return new Promise((resolve) => {
     let body = '';
@@ -111,20 +143,32 @@ function parseBody(req) {
   });
 }
 
-function sendJson(res, statusCode, data, customHeaders = {}) {
-  const origin = res.req?.headers?.origin || '*';
-  const corsHeaders = {
-    'Content-Type': 'application/json; charset=UTF-8',
+function getCorsHeaders(req) {
+  const origin = req.headers.origin || '*';
+  return {
     'Access-Control-Allow-Origin': origin === '*' ? '*' : origin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, X-Requested-With'
+  };
+}
+
+function sendJson(res, statusCode, data, req = null, customHeaders = {}) {
+  const corsHeaders = req ? getCorsHeaders(req) : {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie'
   };
-  res.writeHead(statusCode, { ...corsHeaders, ...customHeaders });
+
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=UTF-8',
+    ...corsHeaders,
+    ...customHeaders
+  });
   res.end(JSON.stringify(data));
 }
 
-function serveStatic(res, filePath) {
+function serveStatic(res, filePath, req) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
@@ -152,13 +196,7 @@ const server = http.createServer(async (req, res) => {
 
   // CORS preflight
   if (method === 'OPTIONS') {
-    const origin = req.headers.origin || '*';
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': origin === '*' ? '*' : origin,
-      'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie'
-    });
+    res.writeHead(204, getCorsHeaders(req));
     return res.end();
   }
 
@@ -166,7 +204,9 @@ const server = http.createServer(async (req, res) => {
 
   // Rutas API
   if (pathname.startsWith('/api/')) {
+    const session = getOrCreateSession(req, res);
     const db = getDb();
+
     if (!db.users) {
       db.users = [
         { id: 'user-admin-01', name: 'Administrador Leños', email: 'admin@lenios.com', password: 'admin123', role: 'admin' },
@@ -181,12 +221,12 @@ const server = http.createServer(async (req, res) => {
       const password = (body.password || '').trim();
 
       if (!email || !password) {
-        return sendJson(res, 400, { success: false, message: 'Correo y contraseña requeridos' });
+        return sendJson(res, 400, { success: false, message: 'Correo y contraseña requeridos' }, req);
       }
 
       const user = db.users.find(u => u.email.toLowerCase() === email && u.password === password);
       if (!user) {
-        return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' });
+        return sendJson(res, 401, { success: false, message: 'Credenciales inválidas. Verifica tu correo y contraseña.' }, req);
       }
 
       // Generar JWT
@@ -196,16 +236,16 @@ const server = http.createServer(async (req, res) => {
         email: user.email,
         role: user.role
       };
-      const token = signJwt(userPayload, 86400); // 24 horas
+      const token = signJwt(userPayload, 86400);
 
       // Establecer Cookie HttpOnly
-      const cookieHeader = `token=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=86400`;
+      const cookieHeader = `token=${token}; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=86400`;
 
       return sendJson(res, 200, {
         success: true,
         message: 'Inicio de sesión exitoso',
         user: userPayload
-      }, { 'Set-Cookie': cookieHeader });
+      }, req, { 'Set-Cookie': cookieHeader });
     }
 
     if (pathname === '/api/auth/me' && method === 'GET') {
@@ -214,7 +254,7 @@ const server = http.createServer(async (req, res) => {
       const decoded = verifyJwt(token);
 
       if (!decoded) {
-        return sendJson(res, 401, { success: false, message: 'No hay sesión activa o el token ha expirado' });
+        return sendJson(res, 401, { success: false, message: 'No hay sesión activa o el token ha expirado' }, req);
       }
 
       return sendJson(res, 200, {
@@ -225,25 +265,65 @@ const server = http.createServer(async (req, res) => {
           email: decoded.email,
           role: decoded.role
         }
-      });
+      }, req);
     }
 
     if (pathname === '/api/auth/logout' && method === 'POST') {
-      const cookieHeader = `token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
-      return sendJson(res, 200, { success: true, message: 'Sesión cerrada correctamente' }, { 'Set-Cookie': cookieHeader });
+      const cookieHeader = `token=; HttpOnly; Path=/; SameSite=Strict; Secure; Max-Age=0`;
+      return sendJson(res, 200, { success: true, message: 'Sesión cerrada correctamente' }, req, { 'Set-Cookie': cookieHeader });
     }
 
-    // 1. Health
+    // 1. Health & Session Check
     if (pathname === '/api/health') {
       return sendJson(res, 200, {
         status: 'online',
         app: 'Leños Rellenos API',
         timestamp: new Date().toISOString(),
-        version: '1.0.0'
-      });
+        version: '1.0.0',
+        sessionId: session.id
+      }, req);
     }
 
-    // 2. Products
+    // 2. Session Management Endpoint
+    if (pathname === '/api/session') {
+      if (method === 'GET') {
+        return sendJson(res, 200, {
+          success: true,
+          sessionId: session.id,
+          cart: session.cart || []
+        }, req);
+      }
+    }
+
+    if (pathname === '/api/session/cart') {
+      if (method === 'GET') {
+        return sendJson(res, 200, {
+          success: true,
+          cart: session.cart || []
+        }, req);
+      }
+
+      if (method === 'POST' || method === 'PUT') {
+        const body = await parseBody(req);
+        if (Array.isArray(body.items)) {
+          // Minimización y validación del carrito en sesión
+          session.cart = body.items.map(item => ({
+            id: String(item.id || ''),
+            cartItemId: String(item.cartItemId || `${item.id}-${(item.customization || '').replace(/\s+/g, '')}`),
+            quantity: Math.max(1, parseInt(item.quantity) || 1),
+            customization: String(item.customization || ''),
+            extraPrice: Math.max(0, parseFloat(item.extraPrice) || 0)
+          }));
+          sessionStore.set(session.id, session);
+        }
+        return sendJson(res, 200, {
+          success: true,
+          cart: session.cart
+        }, req);
+      }
+    }
+
+    // 3. Products
     if (pathname === '/api/products') {
       if (method === 'GET') {
         const category = parsedUrl.searchParams.get('category');
@@ -263,13 +343,13 @@ const server = http.createServer(async (req, res) => {
           products: filtered,
           categories: db.categories,
           customizerOptions: db.customizerOptions
-        });
+        }, req);
       }
 
       if (method === 'POST') {
         const body = await parseBody(req);
         if (!body.name || body.price === undefined) {
-          return sendJson(res, 400, { success: false, message: 'Nombre y precio son requeridos' });
+          return sendJson(res, 400, { success: false, message: 'Nombre y precio son requeridos' }, req);
         }
         const newProduct = {
           id: 'leno-' + Date.now(),
@@ -285,7 +365,7 @@ const server = http.createServer(async (req, res) => {
         };
         db.products.unshift(newProduct);
         saveDb();
-        return sendJson(res, 201, { success: true, product: newProduct });
+        return sendJson(res, 201, { success: true, product: newProduct }, req);
       }
     }
 
@@ -294,10 +374,10 @@ const server = http.createServer(async (req, res) => {
     if (toggleMatch && method === 'PATCH') {
       const prodId = toggleMatch[1];
       const prod = db.products.find(p => p.id === prodId);
-      if (!prod) return sendJson(res, 404, { success: false, message: 'Producto no encontrado' });
+      if (!prod) return sendJson(res, 404, { success: false, message: 'Producto no encontrado' }, req);
       prod.available = !prod.available;
       saveDb();
-      return sendJson(res, 200, { success: true, product: prod, available: prod.available });
+      return sendJson(res, 200, { success: true, product: prod, available: prod.available }, req);
     }
 
     // Delete Product
@@ -306,25 +386,54 @@ const server = http.createServer(async (req, res) => {
       const prodId = deleteMatch[1];
       db.products = db.products.filter(p => p.id !== prodId);
       saveDb();
-      return sendJson(res, 200, { success: true, message: 'Producto eliminado' });
+      return sendJson(res, 200, { success: true, message: 'Producto eliminado' }, req);
     }
 
-    // 3. Orders
+    // 4. Orders (con Minimización y Verificación de Precios en el Servidor)
     if (pathname === '/api/orders') {
       if (method === 'GET') {
-        return sendJson(res, 200, { success: true, count: db.orders.length, orders: db.orders });
+        return sendJson(res, 200, { success: true, count: db.orders.length, orders: db.orders }, req);
       }
 
       if (method === 'POST') {
         const body = await parseBody(req);
         const { customerName, customerPhone, customerAddress, deliveryType, paymentMethod, items, notes } = body;
 
-        if (!customerName || !customerPhone || !items || !Array.isArray(items)) {
-          return sendJson(res, 400, { success: false, message: 'Datos incompletos del pedido' });
+        if (!customerName || !customerPhone || !items || !Array.isArray(items) || items.length === 0) {
+          return sendJson(res, 400, { success: false, message: 'Datos incompletos del pedido' }, req);
         }
 
+        // PRINCIPIO DE MINIMIZACIÓN Y SEGURIDAD:
+        // El servidor valida cada producto contra el catálogo del BackEnd y calcula los precios reales
         let subtotal = 0;
-        items.forEach(i => { subtotal += (parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1); });
+        const verifiedItems = [];
+
+        for (const item of items) {
+          const prod = db.products.find(p => p.id === item.id);
+          if (!prod) {
+            return sendJson(res, 400, {
+              success: false,
+              message: `El producto con ID '${item.id}' no existe en el catálogo.`
+            }, req);
+          }
+
+          const qty = Math.max(1, parseInt(item.quantity) || 1);
+          const extraPrice = Math.max(0, parseFloat(item.extraPrice) || 0);
+          const unitPrice = parseFloat(prod.price) + extraPrice;
+          subtotal += unitPrice * qty;
+
+          verifiedItems.push({
+            id: prod.id,
+            name: prod.name,
+            price: unitPrice,
+            basePrice: prod.price,
+            extraPrice: extraPrice,
+            quantity: qty,
+            customization: item.customization || '',
+            image: prod.image
+          });
+        }
+
         const isDelivery = deliveryType === 'delivery';
         const deliveryCost = isDelivery ? (db.business.deliveryCost || 25.00) : 0;
         const total = subtotal + deliveryCost;
@@ -332,25 +441,26 @@ const server = http.createServer(async (req, res) => {
 
         const newOrder = {
           id: orderId,
-          customerName,
-          customerPhone,
-          customerAddress: customerAddress || (isDelivery ? 'Dirección no especificada' : 'Recoger en Sucursal'),
-          deliveryType: deliveryType || 'delivery',
-          paymentMethod: paymentMethod || 'cash',
-          notes: notes || '',
-          items,
-          subtotal,
-          deliveryCost,
-          total,
+          sessionId: session.id,
+          customerName: String(customerName).trim(),
+          customerPhone: String(customerPhone).trim(),
+          customerAddress: isDelivery ? (String(customerAddress || '').trim() || 'Dirección no especificada') : 'Recoger en Sucursal',
+          deliveryType: isDelivery ? 'delivery' : 'pickup',
+          paymentMethod: paymentMethod === 'transfer' ? 'transfer' : 'cash',
+          notes: String(notes || '').trim(),
+          items: verifiedItems,
+          subtotal: parseFloat(subtotal.toFixed(2)),
+          deliveryCost: parseFloat(deliveryCost.toFixed(2)),
+          total: parseFloat(total.toFixed(2)),
           status: 'received',
           createdAt: new Date().toISOString()
         };
 
         // Descontar inventario
-        items.forEach(orderItem => {
+        verifiedItems.forEach(orderItem => {
           const prod = db.products.find(p => p.id === orderItem.id);
           if (prod && prod.stock > 0) {
-            prod.stock = Math.max(0, prod.stock - (parseInt(orderItem.quantity) || 1));
+            prod.stock = Math.max(0, prod.stock - orderItem.quantity);
             if (prod.stock === 0) prod.available = false;
           }
         });
@@ -359,38 +469,34 @@ const server = http.createServer(async (req, res) => {
         db.orders.unshift(newOrder);
         saveDb();
 
-        const itemsFormattedText = items.map(i => {
-          const customText = i.customization ? ` (${i.customization})` : '';
-          return `• *${i.quantity}x* ${i.name} - $${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)}${customText}`;
-        }).join('\n');
+        // Limpiar carrito de la sesión
+        session.cart = [];
+        sessionStore.set(session.id, session);
 
-        const paymentText = paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
-        const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪';
-
-        const waMessage = 
-          `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
-          `_Acabo de armar mi pedido desde la app web:_\n\n` +
-          `📋 *DETALLES DEL PEDIDO*\n` +
-          `• *Orden:* #${orderId}\n` +
-          `• *Cliente:* ${customerName}\n` +
-          `• *Teléfono:* ${customerPhone}\n` +
-          `• *Entrega:* ${deliveryText}\n` +
-          `• *Dirección:* ${customerAddress || 'Recoger en sucursal'}\n` +
-          `• *Pago:* ${paymentText}\n` +
-          (notes ? `• *Notas:* ${notes}\n` : '') +
-          `\n🛒 *PRODUCTOS:*\n` +
-          `${itemsFormattedText}\n\n` +
+        let waItemsText = verifiedItems.map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
+        const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
+          `📋 *Orden:* #${orderId}\n` +
+          `👤 *Cliente:* ${newOrder.customerName}\n` +
+          `📱 *Teléfono:* ${newOrder.customerPhone}\n` +
+          `📍 *Entrega:* ${isDelivery ? 'A Domicilio' : 'Recoger en Local'}\n` +
+          `🏠 *Dirección:* ${newOrder.customerAddress}\n` +
+          `💳 *Pago:* ${newOrder.paymentMethod === 'cash' ? 'Efectivo al recibir' : 'Transferencia / SPEI'}\n` +
+          (newOrder.notes ? `📝 *Notas:* ${newOrder.notes}\n` : '') +
+          `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
           `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
-          (isDelivery ? `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+          `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` +
           `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
-          `_¡Muchas gracias por su preferencia!_ 🔥🪵`;
+          `_¡Muchas gracias por su preferencia!_`;
 
-        // Número de WhatsApp configurado desde variable de entorno o base de datos
-        const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635';
-        const waNumber = rawWaNumber.replace(/\D/g, '');
-        const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
+        const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635').replace(/\D/g, '');
+        const waUrl = `https://api.whatsapp.com/send?phone=${currentWa}&text=${encodeURIComponent(waMessage)}`;
 
-        return sendJson(res, 201, { success: true, order: newOrder, whatsappUrl: waUrl, whatsappMessage: waMessage });
+        return sendJson(res, 201, {
+          success: true,
+          order: newOrder,
+          whatsappUrl: waUrl,
+          whatsappMessage: waMessage
+        }, req);
       }
     }
 
@@ -400,11 +506,11 @@ const server = http.createServer(async (req, res) => {
       const orderId = orderStatusMatch[1];
       const body = await parseBody(req);
       const order = (db.orders || []).find(o => o.id.toUpperCase() === orderId.toUpperCase());
-      if (!order) return sendJson(res, 404, { success: false, message: 'Pedido no encontrado' });
+      if (!order) return sendJson(res, 404, { success: false, message: 'Pedido no encontrado' }, req);
       order.status = body.status;
       order.updatedAt = new Date().toISOString();
       saveDb();
-      return sendJson(res, 200, { success: true, order });
+      return sendJson(res, 200, { success: true, order }, req);
     }
 
     // Delete order
@@ -413,10 +519,10 @@ const server = http.createServer(async (req, res) => {
       const orderId = deleteOrderMatch[1];
       db.orders = (db.orders || []).filter(o => o.id.toUpperCase() !== orderId.toUpperCase());
       saveDb();
-      return sendJson(res, 200, { success: true, message: 'Pedido eliminado' });
+      return sendJson(res, 200, { success: true, message: 'Pedido eliminado' }, req);
     }
 
-    // 4. Business
+    // 5. Business
     if (pathname === '/api/business/info') {
       const currentWa = (process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || db.business?.whatsappFormatted || '523751837635').replace(/\D/g, '');
       const businessInfo = {
@@ -424,13 +530,15 @@ const server = http.createServer(async (req, res) => {
         whatsappFormatted: currentWa,
         whatsappNumber: process.env.WHATSAPP_NUMBER_DISPLAY || db.business?.whatsappNumber || `+${currentWa}`
       };
-      return sendJson(res, 200, { success: true, business: businessInfo });
+      return sendJson(res, 200, { success: true, business: businessInfo }, req);
     }
+
     if (pathname === '/api/business/toggle' && method === 'PATCH') {
       db.business.isOpen = !db.business.isOpen;
       saveDb();
-      return sendJson(res, 200, { success: true, isOpen: db.business.isOpen, business: db.business });
+      return sendJson(res, 200, { success: true, isOpen: db.business.isOpen, business: db.business }, req);
     }
+
     if (pathname === '/api/business/stats') {
       const orders = db.orders || [];
       const products = db.products || [];
@@ -445,10 +553,10 @@ const server = http.createServer(async (req, res) => {
           outOfStockProducts: products.filter(p => !p.available || p.stock === 0).length,
           isOpen: db.business.isOpen
         }
-      });
+      }, req);
     }
 
-    return sendJson(res, 404, { success: false, message: 'Endpoint no encontrado' });
+    return sendJson(res, 404, { success: false, message: 'Endpoint no encontrado' }, req);
   }
 
   // Servir archivos estáticos del Frontend
@@ -457,7 +565,7 @@ const server = http.createServer(async (req, res) => {
     filePath = path.join(FRONTEND_DIR, 'index.html');
   }
 
-  serveStatic(res, filePath);
+  serveStatic(res, filePath, req);
 });
 
 server.listen(PORT, () => {
@@ -465,6 +573,7 @@ server.listen(PORT, () => {
   console.log(`🔥 LEÑOS RELLENOS - Servidor Activo en:`);
   console.log(`🌐 Aplicación Web: http://localhost:${PORT}`);
   console.log(`📡 API REST:       http://localhost:${PORT}/api`);
+  console.log(`🔒 Cookies Seguras: HttpOnly; Secure; SameSite=Strict`);
   console.log(`📦 Datos:          http://localhost:${PORT}/api/products`);
   console.log('====================================================');
 });

@@ -7,6 +7,7 @@ const API_BASE_URL = 'http://localhost:5000/api';
 class ApiClient {
   constructor() {
     this.isBackendAvailable = null;
+    this.sessionId = null;
     this.initLocalStorage();
   }
 
@@ -26,14 +27,33 @@ class ApiClient {
     }
   }
 
-  // Verificar conexión con el backend de forma segura
+  // Helper centralizado para fetch con cookies y credenciales seguras
+  async secureFetch(endpoint, options = {}) {
+    const fetchOptions = {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      ...options
+    };
+    return fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
+  }
+
+  // Verificar conexión con el backend de forma segura e inicializar sesión con cookie
   async checkBackend() {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 800);
-      const res = await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
+      const res = await this.secureFetch('/health', { signal: controller.signal });
       clearTimeout(timeoutId);
-      this.isBackendAvailable = res.ok;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessionId) this.sessionId = data.sessionId;
+        this.isBackendAvailable = true;
+      } else {
+        this.isBackendAvailable = false;
+      }
     } catch (e) {
       this.isBackendAvailable = false;
     }
@@ -51,10 +71,8 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        const res = await this.secureFetch('/auth/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -86,10 +104,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/me`, {
-          method: 'GET',
-          credentials: 'include'
-        });
+        const res = await this.secureFetch('/auth/me', { method: 'GET' });
         if (res.ok) {
           return await res.json();
         }
@@ -107,10 +122,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          credentials: 'include'
-        });
+        const res = await this.secureFetch('/auth/logout', { method: 'POST' });
         return await res.json();
       } catch (err) {
         console.warn('Fallo backend en logout:', err);
@@ -119,13 +131,57 @@ class ApiClient {
     return { success: true, message: 'Sesión cerrada correctamente' };
   }
 
+  // Obtener sesión activa del backend
+  async getSession() {
+    if (this.isBackendAvailable === null) await this.checkBackend();
+    if (!this.isBackendAvailable) return null;
+
+    try {
+      const res = await this.secureFetch('/session');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessionId) this.sessionId = data.sessionId;
+        return data;
+      }
+    } catch (err) {
+      console.warn('Error al obtener sesión:', err);
+    }
+    return null;
+  }
+
+  // Sincronizar carrito de sesión en backend (Minimizado)
+  async syncSessionCart(cartItems) {
+    if (this.isBackendAvailable === null) await this.checkBackend();
+    if (!this.isBackendAvailable) return false;
+
+    try {
+      // MINIMIZACIÓN DE DATOS: Solo enviamos datos esenciales del carrito
+      const minimizedItems = (cartItems || []).map(item => ({
+        id: item.id,
+        cartItemId: item.cartItemId,
+        quantity: item.quantity,
+        customization: item.customization || '',
+        extraPrice: item.extraPrice || 0
+      }));
+
+      const res = await this.secureFetch('/session/cart', {
+        method: 'POST',
+        body: JSON.stringify({ items: minimizedItems })
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn('Error al sincronizar carrito en sesión:', err);
+      return false;
+    }
+  }
+
   // Obtener productos
   async getProducts() {
     if (this.isBackendAvailable === null) await this.checkBackend();
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products`, { credentials: 'include' });
+        const res = await this.secureFetch('/products');
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_products', JSON.stringify(data.products));
@@ -144,7 +200,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products`, { credentials: 'include' });
+        const res = await this.secureFetch('/products');
         const data = await res.json();
         if (data.customizerOptions) return data.customizerOptions;
       } catch (err) {
@@ -160,7 +216,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/business/info`, { credentials: 'include' });
+        const res = await this.secureFetch('/business/info');
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_business', JSON.stringify(data.business));
@@ -179,10 +235,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/business/toggle`, { 
-          method: 'PATCH',
-          credentials: 'include' 
-        });
+        const res = await this.secureFetch('/business/toggle', { method: 'PATCH' });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_business', JSON.stringify(data.business));
@@ -205,10 +258,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products/${productId}/toggle`, { 
-          method: 'PATCH',
-          credentials: 'include' 
-        });
+        const res = await this.secureFetch(`/products/${productId}/toggle`, { method: 'PATCH' });
         const data = await res.json();
         if (data.success) return data.product;
       } catch (err) {
@@ -232,10 +282,8 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products`, {
+        const res = await this.secureFetch('/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(productData)
         });
         const data = await res.json();
@@ -262,10 +310,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/products/${productId}`, { 
-          method: 'DELETE',
-          credentials: 'include'
-        });
+        const res = await this.secureFetch(`/products/${productId}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) return true;
       } catch (err) {
@@ -279,32 +324,48 @@ class ApiClient {
     return true;
   }
 
-  // Crear pedido
+  // Crear pedido con minimización estricta de datos
   async createOrder(orderPayload) {
     if (this.isBackendAvailable === null) await this.checkBackend();
 
+    // MINIMIZACIÓN ESTRICTA: Solo los datos esenciales para procesar el pedido
+    const minimizedPayload = {
+      customerName: String(orderPayload.customerName || '').trim(),
+      customerPhone: String(orderPayload.customerPhone || '').trim(),
+      customerAddress: orderPayload.deliveryType === 'delivery' ? String(orderPayload.customerAddress || '').trim() : '',
+      deliveryType: orderPayload.deliveryType,
+      paymentMethod: orderPayload.paymentMethod,
+      notes: String(orderPayload.notes || '').trim(),
+      items: (orderPayload.items || []).map(item => ({
+        id: item.id,
+        quantity: Math.max(1, parseInt(item.quantity) || 1),
+        customization: item.customization || '',
+        extraPrice: item.extraPrice || 0
+      }))
+    };
+
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders`, {
+        const res = await this.secureFetch('/orders', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(orderPayload)
+          body: JSON.stringify(minimizedPayload)
         });
         const data = await res.json();
         if (data.success) {
           this.saveOrderLocally(data.order);
           return data;
+        } else {
+          return { success: false, message: data.message || 'Error al procesar pedido' };
         }
       } catch (err) {
-        console.warn('Fallo backend en createOrder:', err);
+        console.warn('Fallo backend en createOrder, usando modo offline:', err);
       }
     }
 
     // Fallback local
     const orderId = `LR-${Math.floor(10000 + Math.random() * 90000)}`;
     const isDelivery = orderPayload.deliveryType === 'delivery';
-    const subtotal = orderPayload.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    const subtotal = (orderPayload.items || []).reduce((sum, i) => sum + ((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)), 0);
     const deliveryCost = isDelivery ? 25.00 : 0;
     const total = subtotal + deliveryCost;
 
@@ -320,36 +381,23 @@ class ApiClient {
 
     this.saveOrderLocally(newOrder);
 
-    // Generar enlace de WhatsApp con formato optimizado
-    const itemsFormattedText = orderPayload.items.map(i => {
-      const customText = i.customization ? ` (${i.customization})` : '';
-      return `• *${i.quantity}x* ${i.name} - $${((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 1)).toFixed(2)}${customText}`;
-    }).join('\n');
-
-    const paymentText = orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir 💵' : 'Transferencia / SPEI 📲';
-    const deliveryText = isDelivery ? 'A Domicilio 🛵' : 'Recoger en Local 🏪';
-
-    const waMessage = 
-      `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
-      `_Acabo de armar mi pedido desde la app web:_\n\n` +
-      `📋 *DETALLES DEL PEDIDO*\n` +
-      `• *Orden:* #${orderId}\n` +
-      `• *Cliente:* ${orderPayload.customerName}\n` +
-      `• *Teléfono:* ${orderPayload.customerPhone}\n` +
-      `• *Entrega:* ${deliveryText}\n` +
-      `• *Dirección:* ${orderPayload.customerAddress || 'Recoger en sucursal'}\n` +
-      `• *Pago:* ${paymentText}\n` +
-      (orderPayload.notes ? `• *Notas:* ${orderPayload.notes}\n` : '') +
-      `\n🛒 *PRODUCTOS:*\n` +
-      `${itemsFormattedText}\n\n` +
+    // Generar enlace de WhatsApp
+    let waItemsText = (orderPayload.items || []).map(i => `• ${i.quantity}x ${i.name} ($${(i.price * i.quantity).toFixed(2)})${i.customization ? ` [${i.customization}]` : ''}`).join('\n');
+    const waMessage = `🪵 *NUEVO PEDIDO LEÑOS RELLENOS* 🪵\n\n` +
+      `📋 *Orden:* #${orderId}\n` +
+      `👤 *Cliente:* ${orderPayload.customerName}\n` +
+      `📱 *Teléfono:* ${orderPayload.customerPhone}\n` +
+      `📍 *Entrega:* ${isDelivery ? 'A Domicilio' : 'Recoger en Local'}\n` +
+      `🏠 *Dirección:* ${orderPayload.customerAddress || 'En sucursal'}\n` +
+      `💳 *Pago:* ${orderPayload.paymentMethod === 'cash' ? 'Efectivo al recibir' : 'Transferencia / SPEI'}\n` +
+      (orderPayload.notes ? `📝 *Notas:* ${orderPayload.notes}\n` : '') +
+      `\n🛒 *PRODUCTOS:*\n${waItemsText}\n\n` +
       `💵 *Subtotal:* $${subtotal.toFixed(2)}\n` +
-      (isDelivery ? `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` : '') +
+      `🛵 *Envío:* $${deliveryCost.toFixed(2)}\n` +
       `💰 *TOTAL A PAGAR: $${total.toFixed(2)}*\n\n` +
-      `_¡Muchas gracias por su preferencia!_ 🔥🪵`;
+      `_¡Muchas gracias por su preferencia!_`;
 
-    const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
-    const waNumber = (business.whatsappFormatted || DEFAULT_BUSINESS.whatsappFormatted || '523751837635').replace(/\D/g, '');
-    const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
+    const waUrl = `https://api.whatsapp.com/send?phone=523751837635&text=${encodeURIComponent(waMessage)}`;
 
     return {
       success: true,
@@ -372,7 +420,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders`, { credentials: 'include' });
+        const res = await this.secureFetch('/orders');
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('lenios_orders', JSON.stringify(data.orders));
@@ -397,10 +445,8 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+        const res = await this.secureFetch(`/orders/${orderId}/status`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({ status })
         });
         const data = await res.json();
@@ -427,10 +473,7 @@ class ApiClient {
 
     if (this.isBackendAvailable) {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, { 
-          method: 'DELETE',
-          credentials: 'include'
-        });
+        const res = await this.secureFetch(`/orders/${orderId}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) return true;
       } catch (err) {

@@ -1,0 +1,402 @@
+{
+  "business": {
+    "name": "Leños Rellenos",
+    "slogan": "Sabor a la Leña - Tradición en cada bocado",
+    "isOpen": true,
+    "schedule": "Lunes a Domingo de 1:00 PM a 10:30 PM",
+    "whatsappNumber": "+52 473 123 4567",
+    "whatsappFormatted": "524731234567",
+    "address": "Calle Tradición Artesanal #108, Guanajuato, Gto.",
+    "deliveryCost": 25,
+    "minOrder": 50
+  },
+  "categories": [
+    {
+      "id": "all",
+      "name": "Todos",
+      "icon": "Flame"
+    },
+    {
+      "id": "clasicos",
+      "name": "Leños Clásicos",
+      "icon": "UtensilsCrossed"
+    },
+    {
+      "id": "especiales",
+      "name": "Leños Especiales",
+      "icon": "Sparkles"
+    },
+    {
+      "id": "gourmet",
+      "name": "Gourmet a la Leña",
+      "icon": "Crown"
+    },
+    {
+      "id": "bebidas",
+      "name": "Bebidas y Postres",
+      "icon": "GlassWater"
+    },
+    {
+      "id": "combos",
+      "name": "Combos Familiares",
+      "icon": "Layers"
+    }
+  ],
+  "products": [
+    {
+      "id": "leno-arrachera",
+      "name": "Leño de Arrachera Ahumada",
+      "category": "gourmet",
+      "price": 89,
+      "stock": 16,
+      "available": true,
+      "isFeatured": true,
+      "badge": "⭐ Más Vendido",
+      "description": "Fina arrachera marinada a las brasas, queso manchego fundido, pimientos asados y chimichurri artesanal.",
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "12-15 min",
+      "calories": "520 kcal"
+    },
+    {
+      "id": "leno-bbq-texas",
+      "name": "Leño BBQ Texas & Tocino",
+      "category": "especiales",
+      "price": 85,
+      "stock": 15,
+      "available": true,
+      "isFeatured": true,
+      "badge": "🔥 Favorito",
+      "description": "Jugoso pulled pork ahumado con salsa BBQ de la casa, tocino crujiente caramelizado y queso cheddar gratinado.",
+      "image": "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "10-12 min",
+      "calories": "560 kcal"
+    },
+    {
+      "id": "leno-pollo-pesto",
+      "name": "Leño de Pollo al Pesto Rústico",
+      "category": "especiales",
+      "price": 82,
+      "stock": 12,
+      "available": true,
+      "isFeatured": true,
+      "badge": "🌿 Recomendado",
+      "description": "Pechuga de pollo a la plancha con pesto artesanal de albahaca fresca, tomates deshidratados y queso mozzarella.",
+      "image": "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "10-14 min",
+      "calories": "480 kcal"
+    },
+    {
+      "id": "leno-salchicha-artesanal",
+      "name": "Leño Salchicha Artesanal & Chimichurri",
+      "category": "clasicos",
+      "price": 75,
+      "stock": 22,
+      "available": true,
+      "isFeatured": true,
+      "badge": "🪵 Tradicional",
+      "description": "Salchicha estilo campestre alemana horneada en masa hojaldrada, cebolla caramelizada y salsa de ajo asado.",
+      "image": "https://images.unsplash.com/photo-1585238342024-78d387f4a707?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "8-10 min",
+      "calories": "490 kcal"
+    },
+    {
+      "id": "leno-carne-ahumada",
+      "name": "Leño de Carne Ahumada Tradicional",
+      "category": "clasicos",
+      "price": 78,
+      "stock": 20,
+      "available": true,
+      "isFeatured": true,
+      "badge": "🏆 Clásico",
+      "description": "Carne de res sazonada con especias de la abuela, ahumada a fuego lento con leña de mezquite y doble queso Oaxaca.",
+      "image": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "10-12 min",
+      "calories": "510 kcal"
+    },
+    {
+      "id": "leno-pastor-artesanal",
+      "name": "Leño al Pastor con Piña Asada",
+      "category": "clasicos",
+      "price": 79,
+      "stock": 16,
+      "available": true,
+      "isFeatured": false,
+      "badge": "🍍 Especial",
+      "description": "Carne al pastor adobada con receta secreta, piña caramelizada al horno de leña, cilantro y cebollitas asadas.",
+      "image": "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "10-12 min",
+      "calories": "500 kcal"
+    },
+    {
+      "id": "leno-vegetariano-supremo",
+      "name": "Leño Vegetariano de la Huerta",
+      "category": "especiales",
+      "price": 72,
+      "stock": 10,
+      "available": true,
+      "isFeatured": false,
+      "badge": "🌱 Veggie",
+      "description": "Champiñones portobello salteados al ajillo, pimientos morrones, espinaca fresca y queso provolone fundido.",
+      "image": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "10-12 min",
+      "calories": "410 kcal"
+    },
+    {
+      "id": "leno-chorizo-argentino",
+      "name": "Leño de Chorizo Argentino & Provolone",
+      "category": "gourmet",
+      "price": 86,
+      "stock": 14,
+      "available": true,
+      "isFeatured": false,
+      "badge": "🥩 Gourmet",
+      "description": "Auténtico chorizo criollo a las brasas, queso provolone ahumado derretido y aderezo especial de chimichurri dulce.",
+      "image": "https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "12-14 min",
+      "calories": "540 kcal"
+    },
+    {
+      "id": "combo-pareja-lenos",
+      "name": "Combo Dúo a la Leña",
+      "category": "combos",
+      "price": 175,
+      "stock": 25,
+      "available": true,
+      "isFeatured": true,
+      "badge": "🏷️ Ahorro",
+      "description": "2 Leños a elegir (Arrachera o BBQ Texas) + 2 Bebidas artesanales + 2 Salsas especiales de la casa.",
+      "image": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "15 min",
+      "calories": "980 kcal"
+    },
+    {
+      "id": "combo-familiar-4",
+      "name": "Paquete Familiar 4 Leños",
+      "category": "combos",
+      "price": 330,
+      "stock": 15,
+      "available": true,
+      "isFeatured": false,
+      "badge": "👨‍👩‍👧‍👦 Familiar",
+      "description": "4 Leños surtidos a tu gusto + 4 Bebidas refrescantes + Degustación de todas nuestras 4 salsas de autor.",
+      "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "20 min",
+      "calories": "1850 kcal"
+    },
+    {
+      "id": "bebida-horchata-artesanal",
+      "name": "Agua de Horchata de la Casa (1L)",
+      "category": "bebidas",
+      "price": 32,
+      "stock": 30,
+      "available": true,
+      "isFeatured": false,
+      "badge": "🧊 Fría",
+      "description": "Preparada artesanalmente con arroz, canela de vara, leche condensada y un toque de vainilla de Papantla.",
+      "image": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "2 min",
+      "calories": "180 kcal"
+    },
+    {
+      "id": "bebida-jamaica-jengibre",
+      "name": "Agua de Jamaica con Infusión de Jengibre (1L)",
+      "category": "bebidas",
+      "price": 32,
+      "stock": 25,
+      "available": true,
+      "isFeatured": false,
+      "badge": "🌺 Natural",
+      "description": "Flor de jamaica natural infusionada en frío con toque ligero de jengibre fresco y menta.",
+      "image": "https://images.unsplash.com/photo-1556881286-fc6915169721?auto=format&fit=crop&w=800&q=80",
+      "prepTime": "2 min",
+      "calories": "110 kcal"
+    }
+  ],
+  "customizerOptions": {
+    "bases": [
+      {
+        "id": "base-clasica",
+        "name": "Trigo Clásico Dorado",
+        "price": 0,
+        "description": "Crujiente por fuera y suave por dentro, receta tradicional horneada."
+      },
+      {
+        "id": "base-rustica",
+        "name": "Masa Rústica a la Leña",
+        "price": 8,
+        "description": "Fermentación lenta con toque ahumado de leña de mezquite."
+      },
+      {
+        "id": "base-integral",
+        "name": "Integral con Semillas",
+        "price": 10,
+        "description": "Harina integral de trigo con semillas de girasol, chía y ajonjolí tostado."
+      }
+    ],
+    "fillings": [
+      {
+        "id": "extra-queso",
+        "name": "Extra Queso Oaxaca Fundido (+100g)",
+        "price": 15
+      },
+      {
+        "id": "extra-tocino",
+        "name": "Tocino Ahumado Crujiente",
+        "price": 18
+      },
+      {
+        "id": "extra-arrachera",
+        "name": "Porción Extra de Arrachera a las Brasas",
+        "price": 28
+      },
+      {
+        "id": "extra-champinones",
+        "name": "Champiñones Salteados al Ajillo",
+        "price": 14
+      },
+      {
+        "id": "extra-jalapeno",
+        "name": "Chiles Toreados al Horno",
+        "price": 8
+      }
+    ],
+    "sauces": [
+      {
+        "id": "salsa-chimichurri",
+        "name": "Salsa Chimichurri Rústico",
+        "price": 0,
+        "description": "Hierbas frescas, ajo picado y aceite de oliva virgen."
+      },
+      {
+        "id": "salsa-ajo-asado",
+        "name": "Salsa Cremosa de Ajo Asado",
+        "price": 0,
+        "description": "Suave emulsión de ajos caramelizados a la leña."
+      },
+      {
+        "id": "salsa-bbq",
+        "name": "Salsa BBQ Ahumada Secreta",
+        "price": 0,
+        "description": "Sabor dulce y ahumado estilo Texas."
+      },
+      {
+        "id": "salsa-habanero",
+        "name": "Salsa Habanero Mango (Picante)",
+        "price": 0,
+        "description": "Dulzor de mango con toque bravo de habanero tatemado."
+      }
+    ]
+  },
+  "orders": [
+    {
+      "id": "LR-67329",
+      "sessionId": "1230803e-1132-4dde-b1d8-95d2a3510ffb",
+      "customerName": "Prueba Cliente",
+      "customerPhone": "4731234567",
+      "customerAddress": "Calle Falsa 123",
+      "deliveryType": "delivery",
+      "paymentMethod": "cash",
+      "notes": "Sin cebolla",
+      "items": [
+        {
+          "id": "leno-arrachera",
+          "name": "Leño de Arrachera Ahumada",
+          "price": 97,
+          "basePrice": 89,
+          "extraPrice": 8,
+          "quantity": 2,
+          "customization": "Base Rústica",
+          "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"
+        }
+      ],
+      "subtotal": 194,
+      "deliveryCost": 25,
+      "total": 219,
+      "status": "received",
+      "createdAt": "2026-09-11T04:28:23.664Z"
+    },
+    {
+      "id": "LR-10821",
+      "customerName": "Emmanuel Santos Díaz",
+      "customerPhone": "9212460459",
+      "customerAddress": "Fracc. La Paz, Dolores Hidalgo, Guanajuato",
+      "deliveryType": "delivery",
+      "paymentMethod": "cash",
+      "notes": "Tocar el timbre blanco, leño bien dorado por favor.",
+      "items": [
+        {
+          "id": "leno-arrachera",
+          "name": "Leño de Arrachera Ahumada",
+          "quantity": 1,
+          "price": 89,
+          "customization": "Base Trigo Clásico, Salsa Chimichurri, Extra Queso"
+        },
+        {
+          "id": "leno-salchicha-artesanal",
+          "name": "Leño Salchicha Artesanal",
+          "quantity": 2,
+          "price": 75,
+          "customization": "Base Rústica, Salsa de Ajo Asado"
+        }
+      ],
+      "subtotal": 239,
+      "deliveryCost": 25,
+      "total": 264,
+      "status": "in_oven",
+      "createdAt": "2026-09-03T09:30:00.000Z"
+    },
+    {
+      "id": "LR-10820",
+      "customerName": "Laura Gómez M.",
+      "customerPhone": "4731123489",
+      "customerAddress": "Callejon del Beso #14, Centro",
+      "deliveryType": "delivery",
+      "paymentMethod": "transfer",
+      "notes": "Llamar antes de llegar",
+      "items": [
+        {
+          "id": "combo-pareja-lenos",
+          "name": "Combo Dúo a la Leña",
+          "quantity": 1,
+          "price": 175,
+          "customization": "1 Arrachera + 1 BBQ Texas, Horchata"
+        }
+      ],
+      "subtotal": 175,
+      "deliveryCost": 25,
+      "total": 200,
+      "status": "on_the_way",
+      "createdAt": "2026-09-03T09:10:00.000Z"
+    },
+    {
+      "id": "LR-10819",
+      "customerName": "Carlos Mejía Ruiz",
+      "customerPhone": "4779876543",
+      "customerAddress": "Para recoger en sucursal",
+      "deliveryType": "pickup",
+      "paymentMethod": "cash",
+      "notes": "Paso a las 2:00 PM",
+      "items": [
+        {
+          "id": "leno-bbq-texas",
+          "name": "Leño BBQ Texas & Tocino",
+          "quantity": 2,
+          "price": 85,
+          "customization": "Salsa BBQ extra"
+        },
+        {
+          "id": "bebida-horchata-artesanal",
+          "name": "Agua de Horchata (1L)",
+          "quantity": 1,
+          "price": 32,
+          "customization": ""
+        }
+      ],
+      "subtotal": 202,
+      "deliveryCost": 0,
+      "total": 202,
+      "status": "delivered",
+      "createdAt": "2026-09-03T08:45:00.000Z"
+    }
+  ]
+}

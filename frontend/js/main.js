@@ -260,14 +260,20 @@ class MainApp {
       return;
     }
 
+    // PRINCIPIO DE MINIMIZACIÓN: Solo los campos estrictamente requeridos para la orden
     const payload = {
       customerName,
       customerPhone,
-      customerAddress,
+      customerAddress: deliveryType === 'delivery' ? customerAddress : '',
       deliveryType,
       paymentMethod,
       notes,
-      items: window.cartManager.items
+      items: window.cartManager.items.map(i => ({
+        id: i.id,
+        quantity: i.quantity,
+        customization: i.customization || '',
+        extraPrice: i.extraPrice || 0
+      }))
     };
 
     const submitBtn = document.getElementById('btnSendWhatsAppOrder') || document.querySelector('.btn-whatsapp-order');
@@ -288,8 +294,11 @@ class MainApp {
         const business = JSON.parse(localStorage.getItem('lenios_business')) || DEFAULT_BUSINESS;
         const phone = (business.whatsappFormatted || '523751837635').replace(/\D/g, '');
 
-        // Abrir WhatsApp y mostrar Modal con el mensaje estructurado
-        window.openWhatsAppWithMessage(phone, waMessage);
+        if (typeof window.openWhatsAppWithMessage === 'function') {
+          window.openWhatsAppWithMessage(phone, waMessage);
+        } else if (result.whatsappUrl) {
+          window.open(result.whatsappUrl, '_blank');
+        }
 
         // Redirigir a vista de seguimiento
         switchView('tracking');
