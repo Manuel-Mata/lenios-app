@@ -1,8 +1,9 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import logger from './config/logger';
+import morgan from 'morgan';
 import { apiLimiter } from './middlewares/rateLimitMiddleware';
 
 // import clienteRoutes from './routes/clienteRoutes';
@@ -19,6 +20,7 @@ const app: Application = express();
 
 // --- MIDDLEWARES GLOBALES --- //
 app.use(helmet());
+app.use(cookieParser());
 
 const allowedOrigins = [
   'http://localhost:4200',
