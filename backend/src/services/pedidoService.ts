@@ -15,6 +15,18 @@ export class PedidoService {
       }
     }
 
+    // Control de Duplicidad Activa: Verificar si el usuario ya tiene un pedido activo (PENDIENTE o EN_PROCESO)
+    const pedidosUsuario = await pedidoRepository.findByUsuarioId(dto.usuarioId);
+    const pedidoActivo = pedidosUsuario.find(
+      (p) => p.estado === EstadoPedido.PENDIENTE || p.estado === EstadoPedido.EN_PROCESO
+    );
+
+    if (pedidoActivo) {
+      throw new Error(
+        `Ya tienes un pedido activo en proceso (#${pedidoActivo.id.substring(0, 8)}). Por favor espera a que se complete o cancele antes de realizar uno nuevo.`
+      );
+    }
+
     return pedidoRepository.createTransactional(dto);
   }
 

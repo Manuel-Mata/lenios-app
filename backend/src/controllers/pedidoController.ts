@@ -19,10 +19,35 @@ export const createPedido = async (req: AuthRequest, res: Response, next: NextFu
 
     const nuevoPedido = await pedidoService.createPedido(dto);
 
+    // Formatear mensaje de WhatsApp
+    const itemsFormattedText = (nuevoPedido.detalles || []).map((d: any) => {
+      return `• *${d.cantidad}x* ${d.producto?.nombre || 'Producto'} - $${(d.precioUnitario * d.cantidad).toFixed(2)}`;
+    }).join('\n');
+
+    const rawWaNumber = process.env.WHATSAPP_NUMBER || process.env.BUSINESS_WHATSAPP || '523751837635';
+    const waNumber = rawWaNumber.replace(/\D/g, '');
+
+    const waMessage = 
+      `🔥 *¡HOLA, LEÑOS RELLENOS!* 🔥\n` +
+      `_Acabo de registrar mi pedido desde la app web:_\n\n` +
+      `📋 *DETALLES DEL PEDIDO*\n` +
+      `• *Orden ID:* #${nuevoPedido.id.substring(0, 8)}\n` +
+      `• *Cliente:* ${req.user.email}\n` +
+      `• *Envío:* ${nuevoPedido.metodoEnvio || 'Pickup'}\n` +
+      (nuevoPedido.observaciones ? `• *Notas:* ${nuevoPedido.observaciones}\n` : '') +
+      `\n🛒 *PRODUCTOS:*\n` +
+      `${itemsFormattedText}\n\n` +
+      `💰 *TOTAL A PAGAR: $${nuevoPedido.total.toFixed(2)}*\n\n` +
+      `_¡Muchas gracias por su preferencia!_ 🔥🪵`;
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${waNumber}&text=${encodeURIComponent(waMessage)}`;
+
     res.status(201).json({
       success: true,
       message: 'Pedido registrado exitosamente',
       data: nuevoPedido,
+      whatsappUrl: waUrl,
+      whatsappMessage: waMessage
     });
   } catch (error: any) {
     res.status(400).json({

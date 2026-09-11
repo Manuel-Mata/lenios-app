@@ -1,0 +1,58 @@
+<header class="navbar">
+  <div class="nav-container">
+    <a routerLink="/catalogo" class="brand">
+      <span class="logo">🪵</span>
+      <span class="brand-name">Leños Rellenos</span>
+    </a>
+
+    <nav class="nav-links">
+      <a routerLink="/catalogo" routerLinkActive="active">📋 Menú</a>
+
+      <a routerLink="/carrito" routerLinkActive="active" class="cart-btn">
+        🛒 Carrito
+        <span class="badge" *ngIf="carritoService.totalCantidadItems() > 0">
+          {{ carritoService.totalCantidadItems() }}
+        </span>
+      </a>
+
+      <!-- Link a Panel Admin solo si es Administrador -->
+      <a
+        *ngIf="authService.isAdmin()"
+        routerLink="/admin"
+        routerLinkActive="active"
+        class="admin-link"
+      >
+        🛡️ Panel Admin
+      </a>
+
+      <!-- Chip de Usuario o Botón Iniciar Sesión -->
+      <div class="auth-menu">
+        <ng-container *ngIf="authService.isAuthenticated(); else loginBtn">
+          <span class="user-greeting">
+            👤 {{ authService.currentUser()?.nombre }}
+          </span>
+          <button (click)="cerrarSesion()" class="btn-logout" title="Cerrar Sesión">
+            🚪 Salir
+          </button>
+        </ng-container>
+
+        <ng-template #loginBtn>
+          <a routerLink="/login" routerLinkActive="active" class="btn-login">
+            🔐 Iniciar Sesión
+          </a>
+        </ng-template>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>
+
+<footer class="app-footer">
+  <p>© 2026 Leños Rellenos — Dolores Hidalgo, Guanajuato. Todos los derechos reservados.</p>
+  <p class="privacy-note">
+    Cumplimiento LGPDPPSO / LFPDPPP — Tratamiento seguro de datos personales para pedidos.
+  </p>
+</footer>

@@ -1,84 +1,53 @@
-# 🪵 LEÑOS RELLENOS — Aplicación Web Completa & Sistema de Pedidos
+# 🪵 LEÑOS RELLENOS — Aplicación Web PWA Full-Stack Seguro
 
-Plataforma digital para el negocio familiar **"Leños Rellenos"** (Dolores Hidalgo, Guanajuato). Sistema de 3 capas con separación total entre **Frontend** y **Backend REST API**.
-
----
-
-## 📂 Arquitectura de Carpetas
-
-```
-lenios-app/
-│
-├── frontend/                     # Capa de Presentación (Frontend)
-│   ├── index.html                # Vistas integradas: Home, Menú, Personalizador, Carrito, Tracking, Admin
-│   ├── css/
-│   │   └── styles.css            # Sistema de diseño oficial: Café (#1F130B), Naranja (#FF7316), Crema (#FFF7ED)
-│   └── js/
-│       ├── api.js                # Conector API híbrido (Node.js REST API + LocalStorage fallback)
-│       ├── products.js           # Catálogo inicial y categorías de leños rellenos
-│       ├── cart.js               # Carrito interactivo, persistencia y checkout
-│       ├── customizer.js         # Panel de personalización de masas, salsas y extras
-│       ├── tracker.js            # Rastreador de orden en tiempo real del cliente
-│       ├── admin.js              # Panel de control / Dashboard del dueño y métricas
-│       └── main.js               # Enrutador, carrusel dinámico y buscador en vivo
-│
-├── backend/                      # Capa de Lógica de Negocio (Backend REST API)
-│   ├── server.js                 # Servidor HTTP Express & REST API
-│   ├── package.json              # Dependencias (Express, CORS)
-│   ├── config/
-│   │   └── db.js                 # Persistencia JSON local / MongoDB Atlas ready
-│   ├── controllers/              # Controladores de productos, pedidos y negocio
-│   ├── routes/                   # Enrutamiento REST (/api/products, /api/orders, /api/business)
-│   ├── data/
-│   │   └── initialData.json      # Base de datos inicial con catálogo y órdenes
-│   └── README.md                 # Documentación técnica de endpoints
-│
-└── README.md                     # Documentación general
-```
+Sistema web de comercio electrónico y gestión de inventario/pedidos para la microempresa artesanal **"Leños Rellenos"** (Dolores Hidalgo, Guanajuato).
 
 ---
 
-## 🚀 Cómo Ejecutar la Aplicación
+## 🏛️ Arquitectura y Patrones de Diseño
+El proyecto implementa una arquitectura desacoplada de tres capas basada en **Angular 19 (Frontend PWA)** y **Node.js + Express + Prisma + PostgreSQL (Backend RESTful)**:
 
-### 1. Iniciar el Backend (Node.js REST API)
-En una terminal en `lenios-app/backend/`:
+1. **Patrón Repository-Service-Controller (Backend)**:
+   - `Repositories`: Abstracción y acceso transaccional a la base de datos PostgreSQL mediante Prisma Client (`pedidoRepository.ts`, `productoRepository.ts`).
+   - `Services`: Lógica de negocio pura, validaciones de existencia, reglas de duplicidad y control de stock (`pedidoService.ts`, `productoService.ts`).
+   - `Controllers`: Manejo de peticiones/respuestas HTTP, formateo y códigos de estado RESTful (`pedidoController.ts`).
+
+2. **Patrón Middleware Chain & Interceptor (Seguridad)**:
+   - `verifyToken` & `requireAdmin`: Autenticación JWT y Control de Acceso Basado en Roles (RBAC).
+   - `bolaMiddleware`: Protección contra Broken Object Level Authorization (BOLA).
+   - `apiInterceptor`: Interceptor HTTP en Angular 19 para inyección automática de encabezados `Authorization: Bearer` y credenciales seguras.
+
+---
+
+## 🛡️ Mecanismos de Seguridad y Privacidad (OWASP & LGPDPPSO)
+- **Sanitización contra XSS**: `SanitizerService` en Angular 19 sanitiza masiva y recursivamente todos los formularios contra scripts maliciosos.
+- **Protección contra Clickjacking**: Meta etiqueta `Content-Security-Policy` estricta con directiva `frame-ancestors 'none'`.
+- **Protección contra SQLi / NoSQLi**: Consultas 100% parametrizadas mediante el ORM Prisma.
+- **Prevención de Fuga de Datos (Mass Assignment)**: Exclusión de hashes de contraseñas y datos sensibles en las respuestas JSON.
+- **Protección de Datos Personales (LGPDPPSO)**: Modal interactivo de Aviso de Privacidad con checkbox obligatorio antes de la captura de datos.
+
+---
+
+## 🐳 Despliegue y Orquestación con Docker
+
+### Requisitos Previos:
+- Docker y Docker Compose instalados.
+
+### Ejecución en un solo comando:
 ```bash
-npm install
-npm start
+docker-compose up --build -d
 ```
-> El servidor REST API correrá en `http://localhost:5000/api`.
 
-### 2. Abrir el Frontend
-Puedes abrir directamente el archivo `frontend/index.html` en tu navegador favorito, o servirlo con cualquier servidor estático (Live Server, Vite, o directamente desde el backend en `http://localhost:5000`).
-
-> 💡 **Nota de resiliencia:** El frontend cuenta con un cliente API híbrido (`js/api.js`) que funciona tanto con el backend de Node.js en ejecución como de manera offline/autónoma en cualquier navegador.
+### Contenedores Orquestados:
+- **`lenios_postgres`**: Base de datos PostgreSQL en puerto `5432`.
+- **`lenios_backend`**: API RESTful Node.js + Express en puerto `3000`.
+- **`lenios_frontend`**: Cliente Angular 19 PWA servido sobre Nginx en puerto `80`.
 
 ---
 
-## ✨ Módulos Implementados
+## 🔑 Credenciales de Prueba para Evaluación (R2)
 
-1. **Página Principal (Home)**:
-   - Hero banner dinámico *"Sabor a la Leña - Tradición en cada bocado"*.
-   - **Carrusel interactivo de leños estrella** con autoplay y controles.
-   - Indicador de estado del negocio (*Abierto ahora* / *Cerrado*) y horarios.
-2. **Catálogo & Menú Digital**:
-   - Filtros por categoría (*Clásicos, Especiales, Gourmet, Bebidas, Combos*).
-   - Buscador en tiempo real por nombre o ingrediente.
-   - Control de disponibilidad y stock visible.
-3. **Panel de Personalización de Leños (Wireframe Pág. 13)**:
-   - Selección de base de masa (Trigo Clásico, Rústica a la Leña, Integral).
-   - Selección de ingredientes extras (Carne ahumada extra, Tocino crujiente, Queso Oaxaca fundido, Champiñones al ajillo).
-   - Salsas de la casa (Chimichurri, Ajo Asado, BBQ Ahumada, Habanero Mango).
-   - Cálculo en vivo del precio y vista previa.
-4. **Carrito de Compras y Envío a WhatsApp (Wireframe Pág. 5 & 14)**:
-   - Persistencia en almacenamiento local al recargar la página.
-   - Control de cantidades (+ / -) y cálculo de envío.
-   - Formulario de entrega (Domicilio o Sucursal) y método de pago.
-   - **Generación automática del pedido estructurado con folio único a WhatsApp**.
-5. **Rastreador de Pedidos del Cliente (Wireframe Pág. 6 & 7)**:
-   - Barra de progreso con 4 etapas: *Recibido ➔ En Horno ➔ En Camino ➔ Entregado*.
-6. **Panel de Administración del Dueño y su Hijo (Wireframe Pág. 6, 9 & 10)**:
-   - KPIs en vivo: Ventas del día, pedidos pendientes, productos activos y agotados.
-   - Switch de 1 clic para abrir o cerrar la tienda.
-   - Gestor de pedidos en vivo con cambio de estados y aviso al cliente por WhatsApp.
-   - Control de stock y disponibilidad de productos con opción de agregar nuevos leños.
+| Rol | Correo Electrónico | Contraseña | Permisos |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@leniosrellenos.com` | `admin123` | Acceso a `/admin`, CRUD de productos, categorías y cambio de estados de pedidos. |
+| **Cliente** | `cliente@ejemplo.com` | `cliente123` | Acceso al menú, carrito y creación de pedidos. |
