@@ -48,6 +48,7 @@ export class CategoriaRepository {
   }
 
   async update(id: string, data: { nombre?: string; descripcion?: string | null }) {
+  async update(id: string, data: any) {
     return prisma.categoria.update({
       where: { id },
       data,

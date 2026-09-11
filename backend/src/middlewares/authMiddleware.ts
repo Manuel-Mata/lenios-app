@@ -30,6 +30,7 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Acceso denegado. Token no proporcionado o inválido.' });
+    return res.status(401).json({ success: false, message: 'Token inválido o expirado.' });
   }
 };
 

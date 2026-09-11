@@ -8,6 +8,8 @@ import {
 } from '../controllers/categoriaController';
 import { verifyToken, requireAdmin } from '../middlewares/authMiddleware';
 import { auditLogger } from '../middlewares/auditMiddleware';
+import { getCategorias, getCategoriaById, createCategoria } from '../controllers/categoriaController';
+import { verifyToken, requireAdmin } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -16,6 +18,7 @@ const router = Router();
  * /api/categorias:
  *   get:
  *     summary: Lista todas las categorías registradas
+ *     summary: Lista todas las categorías
  *     tags: [Categorías]
  *     responses:
  *       200:
@@ -30,6 +33,7 @@ router.route('/').get(getCategorias);
  * /api/categorias:
  *   post:
  *     summary: Crea una nueva categoría (Sólo administradores)
+ *     summary: Crea una nueva categoría (sólo administradores)
  *     tags: [Categorías]
  *     security:
  *       - bearerAuth: []
@@ -59,12 +63,27 @@ router.route('/').get(getCategorias);
  *         description: Acceso denegado (Requiere rol admin)
  */
 router.route('/').post(verifyToken, requireAdmin, auditLogger, createCategoria);
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *               descripcion:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Categoría creada exitosamente
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Prohibido - Requiere rol admin
+ */
+router.route('/').post(verifyToken, requireAdmin, createCategoria);
 
 /**
  * @swagger
  * /api/categorias/{id}:
  *   get:
  *     summary: Obtiene los detalles de una categoría por su ID
+ *     summary: Obtiene una categoría por su ID
  *     tags: [Categorías]
  *     parameters:
  *       - in: path
@@ -73,6 +92,7 @@ router.route('/').post(verifyToken, requireAdmin, auditLogger, createCategoria);
  *         schema:
  *           type: string
  *         description: ID único de la categoría (UUID)
+ *         description: ID de la categoría (UUID)
  *     responses:
  *       200:
  *         description: Categoría encontrada
