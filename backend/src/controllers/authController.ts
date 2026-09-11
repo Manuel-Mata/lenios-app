@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService';
+import { AuthRequest } from '../middlewares/authMiddleware';
+import { UsuarioRepository } from '../repositories/usuarioRepository';
 
 const authService = new AuthService();
+const usuarioRepo = new UsuarioRepository();
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -68,6 +71,29 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
       sameSite: 'strict',
     });
     res.status(200).json({ success: true, message: 'Logout exitoso' });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+/**
+ * GET /auth/me
+ * Devuelve los datos del usuario autenticado leyendo el token de la cookie HttpOnly.
+ * Solo devuelve campos seguros: id, nombre, email, rol.
+ */
+export const getProfileMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: 'Usuario no autenticado.' });
+    }
+
+    const user = await usuarioRepo.findByIdSanitized(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+    }
+
+    res.status(200).json({ success: true, data: user });
   } catch (error: any) {
     next(error);
   }
