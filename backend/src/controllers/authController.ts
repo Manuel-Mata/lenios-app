@@ -28,11 +28,14 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const { email, password } = req.body;
     const result = await authService.login(email, password);
       // Set access token as HttpOnly cookie
+      // sameSite: 'none' es obligatorio cuando frontend y backend están en dominios distintos
+      // secure: true es obligatorio cuando sameSite es 'none'
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('accessToken', result.tokens.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        // Puedes añadir maxAge o expires según política
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000, // 24 horas
       });
       res.status(200).json({
         success: true,
@@ -65,10 +68,11 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
     res.clearCookie('accessToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     });
     res.status(200).json({ success: true, message: 'Logout exitoso' });
   } catch (error: any) {
